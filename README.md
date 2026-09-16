@@ -8,7 +8,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 ## 📑 Índice
 
-- [Como fica na Live](#como-fica-na-live/gravação)
+- [Como fica na Live](#como-fica-na-livegravação)
 - [Como funciona](#-como-funciona)
 - [O que o bot faz](#-o-que-o-bot-faz)
 - [Antes de começar](#-antes-de-começar)
