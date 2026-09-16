@@ -37,12 +37,11 @@ Calculam automaticamente o nível de sucesso (Extremo, Bom, Normal, Falha ou Des
 ![Exemplo de rolagens com o bot](assets/exemplo1.png)
 
 **Integração com o bot Rollem:**
-Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (como `1d20` ou `3d6`), o overlay também captura e exibe esses resultados perfeitamente.
+Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (como `1d20` ou `3d6`), o overlay também captura e exibe esses resultados.
 
 ![Exemplo de rolagens com o Rollem](assets/exemplo2.png)
 
-**Exemplo no layout completo (16:9):**
-Veja como as notificações de rolagem se integram de forma limpa e não intrusiva à interface geral da sua transmissão.
+**Exemplo no layout completo:**
 
 ![Exemplo em um layout completo](assets/exemplo3.png)
 
