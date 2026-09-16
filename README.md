@@ -42,7 +42,7 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 
 ![Exemplo de rolagens com o Rollem](assets/exemplo2.png)
 
-**Exemplo no layout completo:**
+**Exemplo em um layout completo:**
 
 ![Exemplo em um layout completo](assets/exemplo3.png)
 
