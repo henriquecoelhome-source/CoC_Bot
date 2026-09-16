@@ -299,7 +299,6 @@ Planilha "Fichas CoC" carregada com sucesso!
 
 Se você só quer usar o bot de rolagens, já está tudo pronto. Veja [Como usar na mesa](#-como-usar-na-mesa), como [deixar o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional) ou consulte a seção de [Problemas comuns](#-problemas-comuns) caso tenha tido algum problema.
 
----
 
 ## Passo 8 — Colocar o overlay no OBS
 
