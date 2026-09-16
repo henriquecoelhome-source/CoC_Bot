@@ -483,6 +483,21 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 └── diceroll1-3.mp3    # sons de rolagem (sorteados a cada jogada)
 ```
 
+🆘 Precisa de ajuda?
+---
+
+Ficou com alguma dúvida na instalação, o bot não ligou ou apareceu um erro esquisito no terminal? Não se preocupe, o projeto foi feito pra ser acessível e eu estou aqui para ajudar!
+
+Você pode relatar o problema de duas formas:
+
+Abrir uma Issue (Recomendado): Vá na aba Issues aqui no topo do GitHub, clique no botão verde New Issue e descreva o que deu errado. Se puder, cole a mensagem de erro que apareceu no seu terminal ou mande um print.
+
+Contato Direto: Se preferir, pode me chamar direto pelas redes sociais ou dar um grito lá no [Narrativa RPG](https://linktr.ee/NarrativaRPG).
+
+Pode perguntar sem medo, a ideia da ferramenta é justamente facilitar a vida de todo mundo nas mesas(apesar de dificultar na instalação)!
+
+
+
 ---
 
 ## 🏊‍♂️ Créditos
