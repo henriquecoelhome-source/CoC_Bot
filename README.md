@@ -121,6 +121,7 @@ Ao final, sua pasta deve conter:
 ```
 index.js  overlayOBS.html  package.json  README.md  LICENSE
 crit.mp3  falhacrit.mp3  diceroll1.mp3  diceroll2.mp3  diceroll3.mp3
+Ficha-CoC-modelo.xlsx
 ```
 
 ---
@@ -175,6 +176,10 @@ Clique em **Save Changes**.
 
 ## Passo 5 — Preparar a planilha das fichas
 
+> 💡 **Já tem uma ficha modelo pronta neste repositório** (`Ficha-CoC-modelo.xlsx`), criada pelo **Alan** 🙌. Ela já vem com Vida, Sanidade, atributos e perícias com os cálculos automatizados — é só duplicar e preencher os dados do seu investigador. Baixe o arquivo, suba pro seu Google Drive, abra com o Google Planilhas (botão direito → *Abrir com* → *Google Planilhas*) e siga a partir do passo 5.1 abaixo para liberar o acesso.
+>
+> Ela tem um bug visual leve nas perícias — aparece uma linha preta em algumas células por algum motivo — mas é só estético, não atrapalha os cálculos nem a leitura do bot.
+
 ### 5.1 Liberar o acesso
 
 A chave de API só consegue ler planilhas públicas para leitura. **Não use "Publicar na web"** — é outra coisa.
@@ -190,7 +195,7 @@ Olhe a URL da planilha:
 
 ```
 https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456/edit?usp=sharing
-                                      └──────────── isto é o ID ────────┘
+                                      └──────────── isto é o ID ────────────┘
 ```
 
 Copie **só o trecho entre `/d/` e `/edit`** e cole no bloco de notas em `SPREADSHEET_ID`.
@@ -329,7 +334,7 @@ Cada jogador roda uma vez, no início:
 
 O campo tem autocompletar com os nomes das abas da planilha. A resposta é privada (só o jogador vê).
 
-> É preciso registrar de novo **toda vez que o bot for reiniciado** — o vínculo fica na memória, não é salvo em disco.
+> O vínculo fica salvo em `data/registros.json` — não é preciso registrar de novo depois que o bot for reiniciado.
 
 ### `/rl`
 
@@ -444,6 +449,7 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 ```
 ├── index.js           # o bot: Discord, Google Sheets e servidor WebSocket
 ├── overlayOBS.html    # o overlay que vai no OBS (HTML, CSS e JS num arquivo só)
+├── Ficha-CoC-modelo.xlsx  # ficha modelo pronta (criada por Alan), com Vida/Sanidade/perícias calculados
 ├── package.json       # lista de dependências
 ├── .env               # suas chaves secretas (você cria, nunca sobe pro GitHub)
 ├── crit.mp3           # som de crítico
