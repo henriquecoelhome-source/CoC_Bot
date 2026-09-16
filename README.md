@@ -297,7 +297,7 @@ Planilha "Fichas CoC" carregada com sucesso!
 
 🎉 **O bot está no ar.** Deixe essa janela do terminal aberta — fechar o terminal desliga o bot.
 
-Se você só quer usar o bot de rolagens, já está tudo pronto. Veja [Como usar na mesa](#-como-usar-na-mesa), como [deixar o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional) ou consulte a seção de [Problemas comuns](#-problemas-comuns) caso tenha tido algum problema.
+Se você só quer usar o bot de rolagens, já está tudo pronto. Veja [Como usar na mesa](#-como-usar-na-mesa), como [deixar o bot online 24 horas](#deixando-o-bot-online-24-horas-opcional) ou consulte a seção de [Problemas comuns](#-problemas-comuns) caso tenha tido algum problema.
 
 
 ## Passo 8 — Colocar o overlay no OBS
