@@ -179,7 +179,7 @@ Clique em **Save Changes**.
 
 > 💡 **Já tem uma ficha modelo pronta neste repositório** (`Ficha-CoC-modelo.xlsx`), criada pelo **Alan** 🏊‍♂️. Ela é **totalmente automática**: Vida, Sanidade, atributos e perícias já vêm com os cálculos prontos — é só duplicar e preencher os dados do seu investigador que o resto se ajusta sozinho. Baixe o arquivo, suba pro seu Google Drive, abra com o Google Planilhas (botão direito → *Abrir com* → *Google Planilhas*) e siga a partir do passo 5.1 abaixo para liberar o acesso.
 >
-> Ela tem um bug visual leve nas perícias — aparece uma linha preta em algumas células por algum motivo — mas é só estético, não atrapalha os cálculos nem a leitura do bot.
+> Em alguns casos, pode aparecer um bug visual leve nos atributos — aparece uma linha preta em algumas células por algum motivo — mas é só estético, não atrapalha os cálculos nem a leitura do bot.
 
 ### 5.1 Liberar o acesso
 
@@ -196,7 +196,7 @@ Olhe a URL da planilha:
 
 ```
 https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456/edit?usp=sharing
-                                      └──────────── isto é o ID ────────────┘
+                                      └─────────── isto é o ID ─────────┘
 ```
 
 Copie **só o trecho entre `/d/` e `/edit`** e cole no bloco de notas em `SPREADSHEET_ID`.
