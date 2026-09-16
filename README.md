@@ -268,6 +268,7 @@ Abra o terminal **dentro da pasta do projeto**:
 
 - **Windows:** abra a pasta no Explorador, clique na barra de endereço, digite `cmd` e aperte Enter.
 - **macOS:** clique com o botão direito na pasta → *Serviços* → *Novo Terminal na Pasta*.
+- **Linux:** eu acho que você não precisa de mais explicações, vai lá e arrasa
 
 Depois rode:
 
