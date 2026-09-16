@@ -37,7 +37,7 @@ Calculam automaticamente o nível de sucesso (Extremo, Bom, Normal, Falha ou Des
 
 ![Exemplo de rolagens com o bot](assets/exemplo1.png)
 
-**Rolagens nativas no discord:**
+**Como rolagens aparecem no Discord:**
 
 ![Exemplo de rolagem no Discord](assets/exemplo4.png)
 
