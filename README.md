@@ -33,6 +33,7 @@ Abaixo você pode conferir o visual do overlay em ação no OBS. Os cartões apa
 
 **Rolagens nativas do próprio bot:**
 Calculam automaticamente o nível de sucesso (Extremo, Bom, Normal, Falha ou Desastre) e aplicam cores correspondentes aos resultados de Call of Cthulhu 7ª edição, incluindo suporte a Vantagem e Desvantagem.
+
 ![Exemplo de rolagens com o bot](assets/exemplo1.png)
 
 **Integração com o bot Rollem:**
