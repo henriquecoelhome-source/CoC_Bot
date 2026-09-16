@@ -1,7 +1,44 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const WebSocket = require('ws');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
+
+// ---------------------------------------------------------------------
+// Persistência do /registrar — o vínculo usuário → ficha é salvo em
+// disco (data/registros.json) para sobreviver a reinícios do bot.
+// ---------------------------------------------------------------------
+const ARQUIVO_REGISTROS = path.join(__dirname, 'data', 'registros.json');
+
+function garantirPastaDados() {
+    const pasta = path.dirname(ARQUIVO_REGISTROS);
+    if (!fs.existsSync(pasta)) fs.mkdirSync(pasta, { recursive: true });
+}
+
+function carregarRegistros() {
+    garantirPastaDados();
+    try {
+        if (fs.existsSync(ARQUIVO_REGISTROS)) {
+            const conteudo = fs.readFileSync(ARQUIVO_REGISTROS, 'utf-8');
+            const dados = JSON.parse(conteudo);
+            console.log(`Registros carregados de registros.json (${Object.keys(dados).length} vínculo(s)).`);
+            return dados;
+        }
+    } catch (e) {
+        console.error('Erro ao carregar registros.json — iniciando com registros vazios:', e);
+    }
+    return {};
+}
+
+function salvarRegistros() {
+    garantirPastaDados();
+    try {
+        fs.writeFileSync(ARQUIVO_REGISTROS, JSON.stringify(userCharacters, null, 2), 'utf-8');
+    } catch (e) {
+        console.error('Erro ao salvar registros.json:', e);
+    }
+}
 
 // ---------------------------------------------------------------------
 // Servidor WebSocket — canal de eventos para o overlay do OBS.
@@ -10,6 +47,49 @@ const { GoogleSpreadsheet } = require('google-spreadsheet');
 // ---------------------------------------------------------------------
 const wss = new WebSocket.Server({ port: 8080 });
 console.log('Servidor WebSocket iniciado — aguardando conexões do overlay na porta 8080.');
+
+// ---------------------------------------------------------------------
+// Histórico recente de rolagens — se o cliente do overlay cair a
+// internet por um momento, ele perde os eventos transmitidos nesse
+// intervalo (WebSocket é "fire and forget"). Para cobrir isso, mantemos
+// em memória os eventos dos últimos 15 minutos (limitado a 60 registros)
+// e reenviamos esse histórico assim que uma conexão é (re)estabelecida.
+// ---------------------------------------------------------------------
+const JANELA_HISTORICO_MS = 15 * 60 * 1000; // 15 minutos
+const MAX_HISTORICO = 60;
+let historicoRolagens = [];
+
+function limparHistoricoAntigo() {
+    const agora = Date.now();
+    historicoRolagens = historicoRolagens.filter(ev => agora - ev.timestamp <= JANELA_HISTORICO_MS);
+    if (historicoRolagens.length > MAX_HISTORICO) {
+        historicoRolagens = historicoRolagens.slice(historicoRolagens.length - MAX_HISTORICO);
+    }
+}
+
+// Registra o evento no histórico e retransmite para todos os clientes
+// conectados. Usar esta função em vez de "wss.clients.forEach" direto,
+// para que todo evento passe a alimentar o histórico de recuperação.
+function transmitirEvento(evento) {
+    const eventoComTimestamp = { ...evento, timestamp: Date.now() };
+    historicoRolagens.push(eventoComTimestamp);
+    limparHistoricoAntigo();
+
+    wss.clients.forEach(cliente => {
+        if (cliente.readyState === WebSocket.OPEN) {
+            cliente.send(JSON.stringify(eventoComTimestamp));
+        }
+    });
+}
+
+// Ao (re)conectar — inclusive após uma queda momentânea de internet do
+// lado do overlay — reenvia o histórico recente para "recuperar o atraso".
+wss.on('connection', (ws) => {
+    limparHistoricoAntigo();
+    if (historicoRolagens.length > 0) {
+        ws.send(JSON.stringify({ tipo: 'historico', eventos: historicoRolagens }));
+    }
+});
 
 const client = new Client({ 
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
@@ -24,7 +104,7 @@ const doc = new GoogleSpreadsheet(SPREADSHEET_ID, { apiKey: process.env.GOOGLE_A
 // userCharacters:   mapeia o ID do usuário do Discord à aba (ficha) vinculada.
 // characterCache:   cache dos atributos/perícias já lidos de cada ficha.
 // nomeFichaCache:   cache do nome do personagem extraído da própria ficha.
-const userCharacters = {};
+const userCharacters = carregarRegistros();
 const characterCache = {};
 const nomeFichaCache = {};
 
@@ -246,11 +326,7 @@ client.on('messageCreate', async (message) => {
     }
   }
 
-  wss.clients.forEach(cliente => {
-    if (cliente.readyState === WebSocket.OPEN) {
-      cliente.send(JSON.stringify({ tipo: 'rollem', jogador: jogador, resultado: textoOriginal, evento: tipoEvento }));
-    }
-  });
+  transmitirEvento({ tipo: 'rollem', jogador: jogador, resultado: textoOriginal, evento: tipoEvento });
 });
 
 // =====================================================================
@@ -289,6 +365,7 @@ client.on('interactionCreate', async interaction => {
         const sucesso = await syncCharacter(sheet.title);
         if (sucesso) {
             userCharacters[interaction.user.id] = sheet.title;
+            salvarRegistros();
             interaction.editReply(`Conta vinculada com sucesso à **${sheet.title}**!`);
         } else {
             interaction.editReply(`Erro ao ler a ficha **${sheet.title}**.`);
@@ -357,20 +434,16 @@ client.on('interactionCreate', async interaction => {
         const avisoVantPlano = vantagem === 'V' ? 'Vantagem' : (vantagem === 'D' ? 'Desvantagem' : '');
         const textoOBS = `Rolou ${totalFinal} em ${periciaNome} (Alvo: ${valorBase}) ➔ ${statusLimpo}`;
 
-        wss.clients.forEach(cliente => {
-            if (cliente.readyState === WebSocket.OPEN) {
-                cliente.send(JSON.stringify({
-                    tipo: 'comando',
-                    jogador: nomeParaOBS,
-                    pericia: periciaNome,
-                    alvo: valorBase,
-                    valor: totalFinal,
-                    status: statusLimpo,
-                    vantagem: avisoVantPlano,
-                    resultado: textoOBS,
-                    evento: eventoOBS
-                }));
-            }
+        transmitirEvento({
+            tipo: 'comando',
+            jogador: nomeParaOBS,
+            pericia: periciaNome,
+            alvo: valorBase,
+            valor: totalFinal,
+            status: statusLimpo,
+            vantagem: avisoVantPlano,
+            resultado: textoOBS,
+            evento: eventoOBS
         });
 
         const avisoVant = vantagem === 'V' ? ' *(Vantagem)*' : (vantagem === 'D' ? ' *(Desvantagem)*' : '');
