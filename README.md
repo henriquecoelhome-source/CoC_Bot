@@ -27,9 +27,9 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Licença](#-licença)
 
 ---
-## 📸 Como fica na sua live
+## 📸 Como fica na Live ou Gravação
 
-Abaixo você pode conferir o visual do overlay em ação no OBS. Os cartões aparecem na tela em tempo real, acompanhados de efeitos sonoros.
+Abaixo você pode conferir o visual do overlay no OBS. Os cartões aparecem na tela em tempo real, acompanhados de efeitos sonoros.
 
 **Rolagens nativas do próprio bot:**
 Calculam automaticamente o nível de sucesso (Extremo, Bom, Normal, Falha ou Desastre) e aplicam cores correspondentes aos resultados de Call of Cthulhu 7ª edição, incluindo suporte a Vantagem e Desvantagem.
