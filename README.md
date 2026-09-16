@@ -8,6 +8,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 ## 📑 Índice
 
+- [Como fica na Live](#como-fica-na-live/gravação)
 - [Como funciona](#-como-funciona)
 - [O que o bot faz](#-o-que-o-bot-faz)
 - [Antes de começar](#-antes-de-começar)
@@ -27,7 +28,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Licença](#-licença)
 
 ---
-## 📸 Como fica na Live ou Gravação
+## 📸 Como fica na Live/Gravação
 
 Abaixo você pode conferir o visual do overlay no OBS. Os cartões aparecem na tela em tempo real, acompanhados de efeitos sonoros.
 
