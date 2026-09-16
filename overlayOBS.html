@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            padding: 8px;
+            overflow: hidden;
+            background-color: transparent;
+            box-sizing: border-box;
+        }
+
+        /* O tamanho de exibição é definido nas Propriedades da fonte de
+           Browser, no OBS (Largura/Altura). Este container ocupa 100% do
+           espaço reservado a ele — ajuste as dimensões da fonte no OBS
+           conforme o espaço disponível na cena. */
+        #chat-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 5px;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --cor-normal: #ffb648;
+            --cor-crit: #2ee673;
+            --cor-falha: #ff4d5e;
+            --cor-texto: #f2f2f2;
+            --cor-texto-mudo: #a0a0a5;
+            --cor-fundo: rgba(20, 20, 22, 0.92);
+        }
+
+        .mensagem {
+            --cor-evento: var(--cor-normal);
+            font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+            background-color: var(--cor-fundo);
+            border-left: 3px solid var(--cor-evento);
+            border-radius: 5px;
+            padding: 7px 10px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+            animation: aparecer 0.3s ease-out forwards;
+            flex-shrink: 0;
+        }
+
+        .mensagem.evento-critico { --cor-evento: var(--cor-crit); }
+        .mensagem.evento-falha { --cor-evento: var(--cor-falha); }
+
+        .cabecalho {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+        }
+
+        .dado-icone {
+            font-size: 13px;
+            line-height: 1;
+        }
+
+        .jogador {
+            font-weight: 700;
+            font-size: 12px;
+            color: var(--cor-texto-mudo);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .linha-principal {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .pericia {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--cor-texto);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .valor-final {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--cor-evento);
+            line-height: 1;
+        }
+
+        .linha-secundaria {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 3px;
+            gap: 6px;
+        }
+
+        .alvo {
+            font-size: 12px;
+            color: var(--cor-texto-mudo);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--cor-evento);
+            border: 1px solid var(--cor-evento);
+            border-radius: 20px;
+            padding: 1px 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .texto-rollem {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            color: var(--cor-texto);
+        }
+
+        .numero-destaque {
+            color: var(--cor-evento);
+            font-weight: 700;
+        }
+
+        @keyframes aparecer {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat-container"></div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const maxMensagens = 6; // Número de rolagens mantidas visíveis simultaneamente.
+
+        const sonsDeRolagem = ['diceroll1.mp3', 'diceroll2.mp3', 'diceroll3.mp3'];
+
+        /**
+         * Reproduz um arquivo de áudio e resolve a Promise quando a
+         * reprodução termina (ou falha) — garante que a fila de áudio
+         * nunca trave caso o arquivo esteja ausente ou inválido.
+         */
+        function tocarSom(src, volume) {
+            return new Promise((resolve) => {
+                const audio = new Audio(src);
+                audio.volume = volume;
+                const finalizar = () => resolve();
+                audio.addEventListener('ended', finalizar, { once: true });
+                audio.addEventListener('error', () => {
+                    console.warn(`[overlay] Não consegui carregar o áudio: ${src}`);
+                    finalizar();
+                }, { once: true });
+                audio.play().catch((erro) => {
+                    console.warn(`[overlay] play() bloqueado/rejeitado para ${src}:`, erro);
+                    finalizar();
+                });
+            });
+        }
+
+        /**
+         * Reproduz o som de rolagem (sorteado entre as variações
+         * disponíveis) e, em sequência, o som de crítico ou falha
+         * crítica, caso aplicável ao evento recebido.
+         */
+        async function tocarSequenciaDeAudio(evento) {
+            const somRolagem = sonsDeRolagem[Math.floor(Math.random() * sonsDeRolagem.length)];
+            await tocarSom(somRolagem, 0.8);
+
+            if (evento === 'crit') {
+                await tocarSom('crit.mp3', 0.9);
+            } else if (evento === 'fail') {
+                await tocarSom('falhacrit.mp3', 0.9);
+            }
+        }
+
+        function escapeHtml(texto) {
+            if (texto === undefined || texto === null) return '';
+            return String(texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function classeEvento(evento) {
+            if (evento === 'crit') return 'evento-critico';
+            if (evento === 'fail') return 'evento-falha';
+            return '';
+        }
+
+        function renderizarMensagem(dados) {
+            const div = document.createElement('div');
+            div.className = `mensagem ${classeEvento(dados.evento)}`.trim();
+
+            if (dados.tipo === 'comando') {
+                // Mensagem estruturada originada do /rl: perícia, alvo e
+                // status em campos separados, sem parênteses ou setas
+                // embutidos no texto.
+                const sufixoVantagem = dados.vantagem ? ` · ${escapeHtml(dados.vantagem)}` : '';
+                div.innerHTML = `
+                    <div class="cabecalho">
+                        <span class="dado-icone">🎲</span>
+                        <span class="jogador">${escapeHtml(dados.jogador)}</span>
+                    </div>
+                    <div class="linha-principal">
+                        <span class="pericia">${escapeHtml(dados.pericia)}</span>
+                        <span class="valor-final">${escapeHtml(dados.valor)}</span>
+                    </div>
+                    <div class="linha-secundaria">
+                        <span class="alvo">Alvo ${escapeHtml(dados.alvo)}${sufixoVantagem}</span>
+                        <span class="status">${escapeHtml(dados.status)}</span>
+                    </div>
+                `;
+            } else {
+                // Mensagem crua vinda do bot "rollem": remove a formatação
+                // do Discord e destaca os números, preservando o mesmo
+                // layout visual do card estruturado.
+                const textoLimpo = (dados.resultado || '').replace(/[*_~`]/g, '');
+                const textoFormatado = escapeHtml(textoLimpo).replace(/([0-9]+)/g, '<span class="numero-destaque">$1</span>');
+                div.innerHTML = `
+                    <div class="cabecalho">
+                        <span class="dado-icone">🎲</span>
+                        <span class="jogador">${escapeHtml(dados.jogador)}</span>
+                    </div>
+                    <div class="texto-rollem">${textoFormatado}</div>
+                `;
+            }
+
+            chatContainer.appendChild(div);
+            if (chatContainer.children.length > maxMensagens) {
+                chatContainer.removeChild(chatContainer.firstChild);
+            }
+        }
+
+        function conectar() {
+            const ws = new WebSocket('ws://localhost:8080');
+
+            ws.onmessage = function(event) {
+                const dados = JSON.parse(event.data);
+                renderizarMensagem(dados);
+                tocarSequenciaDeAudio(dados.evento);
+            };
+
+            ws.onclose = () => {
+                setTimeout(conectar, 2000);
+            };
+        }
+
+        conectar();
+    </script>
+</body>
+</html>
