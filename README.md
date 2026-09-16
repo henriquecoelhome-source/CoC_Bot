@@ -281,7 +281,7 @@ Isso baixa as bibliotecas (`discord.js`, `ws`, `google-spreadsheet`, `dotenv`) e
 > Se der erro dizendo que não achou o `package.json`, instale manualmente:
 > `npm install discord.js ws google-spreadsheet dotenv`
 
-Agora ligue o bot:
+Agora ligue o bot digitando:
 
 ```bash
 node index.js
