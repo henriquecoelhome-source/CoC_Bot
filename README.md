@@ -35,6 +35,8 @@ Abaixo você pode conferir o visual do overlay no OBS. Os cartões aparecem na t
 **Rolagens nativas do próprio bot:**
 Calculam automaticamente o nível de sucesso (Extremo, Bom, Normal, Falha ou Desastre) e aplicam cores correspondentes aos resultados de Call of Cthulhu 7ª edição, incluindo suporte a Vantagem e Desvantagem.
 
+![Como rolagens aparecem no discord](assets/exemplo4.png)
+
 ![Exemplo de rolagens com o bot](assets/exemplo1.png)
 
 **Integração com o bot Rollem:**
