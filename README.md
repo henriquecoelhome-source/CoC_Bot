@@ -190,7 +190,7 @@ Olhe a URL da planilha:
 
 ```
 https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456/edit?usp=sharing
-                                      └──────────── isto é o ID ────────────┘
+                                      └──────────── isto é o ID ────────┘
 ```
 
 Copie **só o trecho entre `/d/` e `/edit`** e cole no bloco de notas em `SPREADSHEET_ID`.
