@@ -1,93 +1,43 @@
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const WebSocket = require('ws');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
-
-// ---------------------------------------------------------------------
-// Persistência do /registrar — o vínculo usuário → ficha é salvo em
-// disco (data/registros.json) para sobreviver a reinícios do bot.
-// ---------------------------------------------------------------------
-const ARQUIVO_REGISTROS = path.join(__dirname, 'data', 'registros.json');
-
-function garantirPastaDados() {
-    const pasta = path.dirname(ARQUIVO_REGISTROS);
-    if (!fs.existsSync(pasta)) fs.mkdirSync(pasta, { recursive: true });
-}
-
-function carregarRegistros() {
-    garantirPastaDados();
-    try {
-        if (fs.existsSync(ARQUIVO_REGISTROS)) {
-            const conteudo = fs.readFileSync(ARQUIVO_REGISTROS, 'utf-8');
-            const dados = JSON.parse(conteudo);
-            console.log(`Registros carregados de registros.json (${Object.keys(dados).length} vínculo(s)).`);
-            return dados;
-        }
-    } catch (e) {
-        console.error('Erro ao carregar registros.json — iniciando com registros vazios:', e);
-    }
-    return {};
-}
-
-function salvarRegistros() {
-    garantirPastaDados();
-    try {
-        fs.writeFileSync(ARQUIVO_REGISTROS, JSON.stringify(userCharacters, null, 2), 'utf-8');
-    } catch (e) {
-        console.error('Erro ao salvar registros.json:', e);
-    }
-}
+const { JWT } = require('google-auth-library');
 
 // ---------------------------------------------------------------------
 // Servidor WebSocket — canal de eventos para o overlay do OBS.
 // Toda rolagem de dados detectada (via /rl ou observação do bot "rollem")
 // é retransmitida em tempo real para os clientes conectados nesta porta.
 // ---------------------------------------------------------------------
-const wss = new WebSocket.Server({ port: 8080 });
-console.log('Servidor WebSocket iniciado — aguardando conexões do overlay na porta 8080.');
+const PORT = process.env.PORT || 8080;
+const wss = new WebSocket.Server({ port: PORT });
+console.log(`Servidor WebSocket iniciado — aguardando conexões do overlay na porta ${PORT}.`);
 
 // ---------------------------------------------------------------------
-// Histórico recente de rolagens — se o cliente do overlay cair a
-// internet por um momento, ele perde os eventos transmitidos nesse
-// intervalo (WebSocket é "fire and forget"). Para cobrir isso, mantemos
-// em memória os eventos dos últimos 15 minutos (limitado a 60 registros)
-// e reenviamos esse histórico assim que uma conexão é (re)estabelecida.
+// Histórico de eventos — buffer com as últimas rolagens transmitidas.
+// Sem isso, um evento só chega a quem já estava conectado no instante
+// exato do broadcast: se o overlay cair e reconectar (queda de rede,
+// reload da fonte de navegador no OBS etc.), tudo que rolou nesse meio
+// tempo se perde, porque o servidor nunca guardava nada, só repassava.
+// Ao conectar, o overlay agora recebe esse histórico de uma vez.
 // ---------------------------------------------------------------------
-const JANELA_HISTORICO_MS = 15 * 60 * 1000; // 15 minutos
-const MAX_HISTORICO = 60;
-let historicoRolagens = [];
+const HISTORICO_MAX = 6; // mesmo valor de maxMensagens no overlay
+let historicoEventos = [];
 
-function limparHistoricoAntigo() {
-    const agora = Date.now();
-    historicoRolagens = historicoRolagens.filter(ev => agora - ev.timestamp <= JANELA_HISTORICO_MS);
-    if (historicoRolagens.length > MAX_HISTORICO) {
-        historicoRolagens = historicoRolagens.slice(historicoRolagens.length - MAX_HISTORICO);
-    }
-}
-
-// Registra o evento no histórico e retransmite para todos os clientes
-// conectados. Usar esta função em vez de "wss.clients.forEach" direto,
-// para que todo evento passe a alimentar o histórico de recuperação.
 function transmitirEvento(evento) {
-    const eventoComTimestamp = { ...evento, timestamp: Date.now() };
-    historicoRolagens.push(eventoComTimestamp);
-    limparHistoricoAntigo();
+    historicoEventos.push(evento);
+    if (historicoEventos.length > HISTORICO_MAX) historicoEventos.shift();
 
     wss.clients.forEach(cliente => {
         if (cliente.readyState === WebSocket.OPEN) {
-            cliente.send(JSON.stringify(eventoComTimestamp));
+            cliente.send(JSON.stringify(evento));
         }
     });
 }
 
-// Ao (re)conectar — inclusive após uma queda momentânea de internet do
-// lado do overlay — reenvia o histórico recente para "recuperar o atraso".
 wss.on('connection', (ws) => {
-    limparHistoricoAntigo();
-    if (historicoRolagens.length > 0) {
-        ws.send(JSON.stringify({ tipo: 'historico', eventos: historicoRolagens }));
+    if (historicoEventos.length > 0) {
+        ws.send(JSON.stringify({ tipo: 'historico', eventos: historicoEventos }));
     }
 });
 
@@ -96,17 +46,83 @@ const client = new Client({
 });
 
 // ---------------------------------------------------------------------
-// Integração com Google Sheets — fonte de dados das fichas de personagem.
+// Integração com Google Sheets — fonte de dados das fichas de personagem
+// e, agora, também onde ficam salvos os vínculos usuário → ficha.
+//
+// Antes a autenticação era só com uma API key, que só permite leitura.
+// Para gravar dados na planilha (a persistência dos registros, logo
+// abaixo) é preciso uma Service Account do Google, com permissão de
+// edição — as credenciais vêm de variáveis de ambiente, nunca ficam
+// hardcoded aqui. Veja o README para o passo a passo de como gerar
+// essas credenciais e compartilhar a planilha com a Service Account.
 // ---------------------------------------------------------------------
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const doc = new GoogleSpreadsheet(SPREADSHEET_ID, { apiKey: process.env.GOOGLE_API_KEY });
+const serviceAccountAuth = new JWT({
+    email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+    key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
+const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
 
 // userCharacters:   mapeia o ID do usuário do Discord à aba (ficha) vinculada.
 // characterCache:   cache dos atributos/perícias já lidos de cada ficha.
 // nomeFichaCache:   cache do nome do personagem extraído da própria ficha.
-const userCharacters = carregarRegistros();
+const userCharacters = {};
 const characterCache = {};
 const nomeFichaCache = {};
+
+// ---------------------------------------------------------------------
+// Persistência dos vínculos usuário → ficha (comando /registrar).
+//
+// userCharacters vivia só em memória (RAM do processo): qualquer
+// reinício do processo Node apagava tudo sem deixar rastro — inclusive
+// todo deploy novo no Render, já que lá o disco local é efêmero (some
+// a cada redeploy, não só quando o serviço hiberna). Por isso os
+// vínculos agora moram numa aba própria da planilha ("Registros"),
+// que é externa ao servidor: sobrevive a qualquer redeploy, crash ou
+// hibernação, porque não depende do disco do bot.
+// ---------------------------------------------------------------------
+const REGISTROS_SHEET_TITLE = 'Registros';
+
+async function getOrCriarAbaRegistros() {
+    let sheet = doc.sheetsByTitle[REGISTROS_SHEET_TITLE];
+    if (!sheet) {
+        sheet = await doc.addSheet({ title: REGISTROS_SHEET_TITLE, headerValues: ['UserID', 'Ficha'] });
+        console.log(`Aba "${REGISTROS_SHEET_TITLE}" criada na planilha.`);
+    }
+    return sheet;
+}
+
+async function carregarRegistros() {
+    try {
+        const sheet = await getOrCriarAbaRegistros();
+        const rows = await sheet.getRows();
+        for (const row of rows) {
+            const userId = row.get('UserID');
+            const ficha = row.get('Ficha');
+            if (userId && ficha) userCharacters[userId] = ficha;
+        }
+        console.log(`Registros carregados da planilha: ${Object.keys(userCharacters).length} vínculo(s) de usuário → ficha.`);
+    } catch (e) {
+        console.error('Erro ao carregar registros da planilha:', e);
+    }
+}
+
+async function salvarRegistro(userId, ficha) {
+    try {
+        const sheet = await getOrCriarAbaRegistros();
+        const rows = await sheet.getRows();
+        const existente = rows.find(r => r.get('UserID') === userId);
+        if (existente) {
+            existente.set('Ficha', ficha);
+            await existente.save();
+        } else {
+            await sheet.addRow({ UserID: userId, Ficha: ficha });
+        }
+    } catch (e) {
+        console.error('Erro ao salvar registro na planilha:', e);
+    }
+}
 
 /**
  * Lê a aba `sheetTitle` da planilha e extrai atributos, perícias, Sorte,
@@ -246,6 +262,16 @@ client.once('ready', async () => {
     await doc.loadInfo();
     console.log(`Planilha "${doc.title}" carregada com sucesso!`);
 
+    // Restaura os vínculos usuário → ficha salvos na planilha e resincroniza
+    // o cache de cada ficha envolvida, para que /rl já funcione sem que
+    // ninguém precise rodar /registrar de novo depois de um restart.
+    await carregarRegistros();
+    const fichasParaResincronizar = new Set(Object.values(userCharacters));
+    for (const sheetTitle of fichasParaResincronizar) {
+        const ok = await syncCharacter(sheetTitle);
+        console.log(ok ? `Ficha "${sheetTitle}" resincronizada.` : `Falha ao resincronizar "${sheetTitle}".`);
+    }
+
     const commands = [
         new SlashCommandBuilder()
             .setName('registrar')
@@ -365,7 +391,7 @@ client.on('interactionCreate', async interaction => {
         const sucesso = await syncCharacter(sheet.title);
         if (sucesso) {
             userCharacters[interaction.user.id] = sheet.title;
-            salvarRegistros();
+            await salvarRegistro(interaction.user.id, sheet.title);
             interaction.editReply(`Conta vinculada com sucesso à **${sheet.title}**!`);
         } else {
             interaction.editReply(`Erro ao ler a ficha **${sheet.title}**.`);
