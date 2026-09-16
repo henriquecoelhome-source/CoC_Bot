@@ -206,7 +206,7 @@ A chave de API só consegue ler planilhas públicas para leitura. **Não use "Pu
 
 1. Abra sua planilha de fichas no Google Sheets.
 2. Clique em **Compartilhar** (canto superior direito).
-3. Em "Acesso geral", troque para **Qualquer pessoa com o link** → permissão **Leitor**.
+3. Em "Acesso geral", troque para **Qualquer pessoa com o link** → permissão **Editor** por que os jogadores precisam editar suas propias fichas (em paginas diferentes da mesma planilha).
 4. Clique em **Concluído**.
 
 ### 5.2 Pegar o ID da planilha
