@@ -8,14 +8,14 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 ## 📑 Índice
 
-- [Como fica na Live](#como-fica-na-livegravação)
+- [Como fica na Live](#-como-fica-na-livegravação)
 - [Como funciona](#-como-funciona)
 - [O que o bot faz](#-o-que-o-bot-faz)
 - [Antes de começar](#-antes-de-começar)
 - [Passo 1 — Instalar o Node.js](#passo-1--instalar-o-nodejs)
 - [Passo 2 — Baixar o projeto](#passo-2--baixar-o-projeto)
 - [Passo 3 — Criar o bot no Discord](#passo-3--criar-o-bot-no-discord)
-- [Passo 4 — Criar a chave da API do Google](#passo-4--criar-a-chave-da-api-do-google)
+- [Passo 4 — Criar a Service Account do Google](#passo-4--criar-a-service-account-do-google)
 - [Passo 5 — Preparar a planilha das fichas](#passo-5--preparar-a-planilha-das-fichas)
 - [Passo 6 — Criar o arquivo .env](#passo-6--criar-o-arquivo-env)
 - [Passo 7 — Instalar e ligar o bot](#passo-7--instalar-e-ligar-o-bot)
@@ -54,18 +54,18 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 ## 🔄 Como funciona
 
 ```
-  Planilha do Google  ──lê as fichas──►  ┌─────────────┐
-                                         │             │
-  Discord (/rl, /registrar) ────────────►│   index.js  │
-                                         │   (o bot)   │
-  Bot Rollem (rolagens soltas) ─────────►│             │
-                                         └──────┬──────┘
-                                                │ WebSocket (porta 8080)
-                                                ▼
-                                    overlayOBS.html  ──►  sua live no OBS
+  Planilha do Google  ◄──lê fichas, lê/grava Registros──►  ┌─────────────┐
+                                                           │             │
+  Discord (/rl, /registrar) ──────────────────────────────►│   index.js  │
+                                                           │   (o bot)   │
+  Bot Rollem (rolagens soltas) ─────────────────────────► │             │
+                                                           └──────┬──────┘
+                                                                  │ WebSocket (porta 8080)
+                                                                  ▼
+                                              overlayOBS.html  ──►  sua live no OBS
 ```
 
-O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com o Discord e com o Google, e transmite cada rolagem para o `overlayOBS.html`, que você adiciona no OBS como fonte de navegador. **Se o `index.js` estiver desligado, o overlay fica vazio.**
+O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com o Discord e com o Google (lendo as fichas dos investigadores e também lendo/gravando os vínculos de `/registrar` na aba Registros), e transmite cada rolagem para o `overlayOBS.html`, que você adiciona no OBS como fonte de navegador. **Se o `index.js` estiver desligado, o overlay fica vazio.**
 
 ---
 
@@ -74,7 +74,7 @@ O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com 
 | Recurso | Descrição |
 |---|---|
 | **Fichas no Google Sheets** | Lê atributos (FOR, DES, INT, CON, APA, POD, TAM, EDU), Sorte, Sanidade e todas as perícias direto da planilha. |
-| **`/registrar`** | Vincula o jogador do Discord à aba da ficha dele. |
+| **`/registrar`** | Vincula o jogador do Discord à aba da ficha dele. O vínculo fica salvo na própria planilha e sobrevive a reinícios e deploys. |
 | **`/rl`** | Rola a perícia com autocompletar e já calcula o nível de sucesso. |
 | **Regras de CoC 7e** | Crítico Absoluto (01), Sucesso Extremo (⅕), Bom (½), Normal, Falha e Desastre. |
 | **Vantagem / Desvantagem** | Rola um dado de dezena extra e usa o melhor (ou o pior) resultado. |
@@ -94,15 +94,16 @@ Você vai precisar de:
 - [ ] O OBS Studio instalado (só para a parte do overlay)
 - [ ] Cerca de 40 minutos
 
-Ao longo do guia você vai anotar **três informações secretas**. Deixe um bloco de notas aberto para colar cada uma delas:
+Ao longo do guia você vai anotar **quatro informações secretas**. Deixe um bloco de notas aberto para colar cada uma delas:
 
 ```
 DISCORD_TOKEN = ...
-GOOGLE_API_KEY = ...
+GOOGLE_SERVICE_ACCOUNT_EMAIL = ...
+GOOGLE_PRIVATE_KEY = ...
 SPREADSHEET_ID = ...
 ```
 
-> ⚠️ **Nunca poste esses três valores em lugar nenhum** — nem no chat da live, nem em prints, nem no GitHub. Quem tiver o token do Discord assume o controle do seu bot.
+> ⚠️ **Nunca poste esses valores em lugar nenhum** — nem no chat da live, nem em prints, nem no GitHub. Quem tiver o token do Discord ou a chave privada da Service Account assume o controle do seu bot (e da sua planilha).
 
 ---
 
@@ -185,16 +186,31 @@ Clique em **Save Changes**.
 
 ---
 
-## Passo 4 — Criar a chave da API do Google
+## Passo 4 — Criar a Service Account do Google
+
+O bot não usa mais uma chave de API simples — aquilo só permitia **ler** a planilha. Agora, para guardar os vínculos do `/registrar` direto nela, o bot também precisa **escrever**, e o Google exige uma **Service Account** (uma espécie de "conta robô" com usuário e senha próprios) para isso.
 
 1. Acesse **<https://console.cloud.google.com/>** e faça login.
 2. No topo, clique no seletor de projeto → **Novo projeto** → dê um nome → **Criar**.
 3. Com o projeto selecionado, use a busca do topo para achar **Google Sheets API** e clique em **Ativar**.
 4. No menu lateral, vá em **APIs e serviços** → **Credenciais**.
-5. Clique em **Criar credenciais** → **Chave de API**.
-6. Copie a chave e cole no bloco de notas em `GOOGLE_API_KEY`.
+5. Clique em **Criar credenciais** → **Conta de serviço**.
+6. Dê um nome (ex.: `bot-coc`) e clique em **Concluir**. Pode pular as telas de papel/função e de acesso de usuários — não são necessárias aqui.
+7. Na lista de contas de serviço, clique na que você acabou de criar.
+8. Vá na aba **Chaves** → **Adicionar chave** → **Criar nova chave** → formato **JSON** → **Criar**.
+9. Um arquivo `.json` é baixado no seu computador automaticamente. Abra-o num editor de texto (Bloco de Notas serve) — dentro dele estão os dois valores que você precisa:
 
-> **Dica de segurança:** clique em *Editar chave de API* e, em "Restrições de API", limite o uso apenas à *Google Sheets API*. Assim a chave não serve para mais nada caso vaze.
+```json
+{
+  "client_email": "bot-coc@seu-projeto.iam.gserviceaccount.com",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQ...\n-----END PRIVATE KEY-----\n"
+}
+```
+
+10. Copie o valor de `client_email` para o bloco de notas em `GOOGLE_SERVICE_ACCOUNT_EMAIL`.
+11. Copie o valor de `private_key` (com aspas e os `\n` inclusos, exatamente como está) para `GOOGLE_PRIVATE_KEY`.
+
+> ⚠️ **Guarde bem esse `.json`** — ele dá acesso de leitura e escrita à sua planilha, igual a uma senha. Depois de copiar os dois valores para o `.env` (Passo 6), você não precisa mais manter o arquivo dentro da pasta do projeto — pode movê-lo para outro lugar fora do repositório. Ele **nunca** deve ir para o GitHub (veja o aviso no Passo 6 sobre o `.gitignore`).
 
 ---
 
@@ -206,12 +222,14 @@ Clique em **Save Changes**.
 
 ### 5.1 Liberar o acesso
 
-A chave de API só consegue ler planilhas públicas para leitura. **Não use "Publicar na web"** — é outra coisa.
+**Não use "Publicar na web"** — é outra coisa.
 
 1. Abra sua planilha de fichas no Google Sheets.
 2. Clique em **Compartilhar** (canto superior direito).
 3. Em "Acesso geral", troque para **Qualquer pessoa com o link** → permissão **Editor** por que os jogadores precisam editar suas própias fichas (em páginas diferentes da mesma planilha).
 4. Clique em **Concluído**.
+
+> 💡 Isso já é suficiente para o bot também: uma Service Account é uma conta do Google como outra qualquer, então o link "qualquer pessoa com o link → Editor" cobre ela também — não precisa compartilhar de novo com o `client_email` dela. A exceção é se a sua conta Google faz parte de um Workspace (empresa/faculdade) que bloqueia esse tipo de compartilhamento por link; nesse caso, compartilhe também diretamente com o e-mail da Service Account (o `client_email` do Passo 4), com permissão **Editor**.
 
 ### 5.2 Pegar o ID da planilha
 
@@ -256,13 +274,18 @@ Conteúdo:
 
 ```env
 DISCORD_TOKEN=cole_aqui_o_token_do_discord
-GOOGLE_API_KEY=cole_aqui_a_chave_do_google
+GOOGLE_SERVICE_ACCOUNT_EMAIL=cole_aqui_o_client_email_da_service_account
+GOOGLE_PRIVATE_KEY="cole_aqui_a_private_key_da_service_account"
 SPREADSHEET_ID=cole_aqui_o_id_da_planilha
 ```
 
-Sem aspas, sem espaços em volta do `=`.
+Sem espaços em volta do `=`. A única que leva aspas é a `GOOGLE_PRIVATE_KEY` — ela sai do `.json` (Passo 4) em várias linhas, mas no `.env` precisa ficar **numa linha só**, entre aspas, com os `\n` exatamente como estão no arquivo original (não troque por quebras de linha de verdade). Deve ficar parecida com isto:
 
-> Se você for subir o projeto para o GitHub, garanta que existe um arquivo `.gitignore` contendo as linhas `.env` e `node_modules`.
+```env
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvQ...\n-----END PRIVATE KEY-----\n"
+```
+
+> Se você for subir o projeto para o GitHub, garanta que existe um arquivo `.gitignore` contendo as linhas `.env` e `node_modules`. Se você guardou o `.json` da Service Account (Passo 4) dentro da pasta do projeto por comodidade, adicione o nome dele ao `.gitignore` também — ou, melhor ainda, mova-o para fora da pasta assim que copiar os dois valores para o `.env`.
 
 ---
 
@@ -280,10 +303,10 @@ Depois rode:
 npm install
 ```
 
-Isso baixa as bibliotecas (`discord.js`, `ws`, `google-spreadsheet`, `dotenv`) e cria a pasta `node_modules`. Demora um ou dois minutos.
+Isso baixa as bibliotecas (`discord.js`, `ws`, `google-spreadsheet`, `google-auth-library`, `dotenv`) e cria a pasta `node_modules`. Demora um ou dois minutos.
 
 > Se der erro dizendo que não achou o `package.json`, instale manualmente:
-> `npm install discord.js ws google-spreadsheet dotenv`
+> `npm install discord.js ws google-spreadsheet google-auth-library dotenv`
 
 Agora ligue o bot digitando:
 
@@ -291,17 +314,20 @@ Agora ligue o bot digitando:
 node index.js
 ```
 
-Se tudo estiver certo, aparece:
+Se tudo estiver certo, aparece algo como:
 
 ```
 Servidor WebSocket iniciado — aguardando conexões do overlay na porta 8080.
 Bot conectado como SeuBot#1234!
 Planilha "Fichas CoC" carregada com sucesso!
+Registros carregados da planilha: 0 vínculo(s) de usuário → ficha.
 ```
+
+Na primeiríssima vez, o bot cria sozinho uma aba **Registros** na planilha (com as colunas `UserID` e `Ficha`) para guardar os vínculos do `/registrar` — não precisa criar essa aba na mão. Nas próximas vezes que o bot ligar, aparecerá também uma linha por ficha já registrada, tipo `Ficha "Ficha 1 (Arthur)" resincronizada.`, confirmando que os jogadores não vão precisar rodar `/registrar` de novo.
 
 🎉 **O bot está no ar.** Deixe essa janela do terminal aberta — fechar o terminal desliga o bot.
 
-Se você só quer usar o bot de rolagens, já está tudo pronto. Veja [Como usar na mesa](#-como-usar-na-mesa), como [deixar o bot online 24 horas](#deixando-o-bot-online-24-horas-opcional) ou consulte a seção de [Problemas comuns](#-problemas-comuns) caso tenha tido algum problema.
+Se você só quer usar o bot de rolagens, já está tudo pronto. Veja [Como usar na mesa](#-como-usar-na-mesa), como [deixar o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional) ou consulte a seção de [Problemas comuns](#-problemas-comuns) caso tenha tido algum problema.
 
 
 ## Passo 8 — Colocar o overlay no OBS
@@ -360,7 +386,7 @@ Cada jogador roda uma vez, no início:
 
 O campo tem autocompletar com os nomes das abas da planilha. A resposta é privada (só o jogador vê).
 
-> O vínculo fica salvo em `data/registros.json` — não é preciso registrar de novo depois que o bot for reiniciado.
+> O vínculo fica salvo numa aba **Registros** (colunas `UserID` e `Ficha`) que o próprio bot cria na planilha, se ela ainda não existir. Por estar na planilha (e não no disco do bot), o vínculo sobrevive a reinícios, quedas e até a um novo deploy — ninguém precisa rodar `/registrar` de novo depois disso. Evite apagar ou renomear essa aba manualmente; se isso acontecer, o bot cria outra em branco e os jogadores precisam se registrar de novo.
 
 ### `/rl`
 
@@ -440,7 +466,7 @@ Depois:
 1. Suba o projeto para um repositório no GitHub (**sem o `.env`**).
 2. No Render, crie um **Web Service** conectado a esse repositório.
 3. Em *Build Command* use `npm install` e em *Start Command* use `node index.js`.
-4. Em **Environment**, cadastre `DISCORD_TOKEN`, `GOOGLE_API_KEY` e `SPREADSHEET_ID` como variáveis.
+4. Em **Environment**, cadastre `DISCORD_TOKEN`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY` e `SPREADSHEET_ID` como variáveis (cole a `GOOGLE_PRIVATE_KEY` com os `\n` literais, igual está no `.env`).
 5. Depois do deploy, o Render te dá um endereço. No `overlayOBS.html`, use esse endereço com `wss://`:
 
 ```javascript
@@ -455,13 +481,15 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| `Used disallowed intents` ao iniciar | Intents privilegiadas desligadas | Volte ao [Passo 3.3](#33-ligar-a-permissão-de-leitura-de-mensagens-️) e ative *Message Content* e *Server Members*. |
+| `Used disallowed intents` ao iniciar | Intents privilegiadas desligadas | Volte ao [Passo 3.3](#33-ligar-a-permissão-de-leitura-de-mensagens-) e ative *Message Content* e *Server Members*. |
 | `An invalid token was provided` | Token errado ou com espaço sobrando | Resete o token no Developer Portal e cole de novo no `.env`. |
 | O bot liga, mas `/rl` não aparece no Discord | Comandos ainda propagando | Espere alguns minutos e reinicie o app do Discord (`Ctrl + R`). |
-| `The caller does not have permission` | Planilha não está compartilhada | Passo 5.1: acesso *Qualquer pessoa com o link → Leitor*. |
-| `API key not valid` | Sheets API não ativada no projeto | Passo 4, item 3. |
+| `The caller does not have permission` | Planilha não compartilhada com a Service Account | Passo 5.1: link em **Editor**, ou compartilhe direto com o `client_email` da Service Account. |
+| `Google Sheets API has not been used...` ou erro parecido | Sheets API não ativada no projeto certo do Google Cloud | Passo 4, item 3. |
+| `error:...DECODER routines` ou `Invalid PEM formatted message` ao iniciar | `GOOGLE_PRIVATE_KEY` colada errada no `.env` | Revise o Passo 6: a chave precisa ficar entre aspas, numa linha só, com os `\n` literais (não troque por quebra de linha de verdade). |
 | `Não encontrei aba contendo "..."` | Nome digitado ≠ nome da aba | Use o autocompletar do `/registrar` em vez de digitar. |
-| Registrou, mas nenhuma perícia aparece no `/rl` | Planilha fora do formato esperado | Revise o [Passo 5.3](#53-como-a-planilha-precisa-estar-organizada). Valores precisam ser números. |
+| Jogador já registrado precisa rodar `/registrar` de novo | A aba **Registros** foi apagada/renomeada, ou a planilha perdeu a permissão de Editor para a Service Account | Confira se a aba "Registros" ainda existe e se o compartilhamento (Passo 5.1) continua como Editor. |
+| Registrou, mas nenhuma perícia aparece no `/rl` | Planilha fora do formato esperado | Revise o [Passo 5.3](#53-como-a-planilha-precisa-estar-organizada-ignorar-caso-usar-a-disponibilizada). Valores precisam ser números. |
 | Overlay em branco no OBS | Endereço do WebSocket errado, ou bot desligado | Passo 8.1 (`ws://localhost:8080`) e confira se o terminal ainda está rodando. |
 | Cartões aparecem, mas sem som | Áudio não roteado | Marque *Controlar áudio via OBS* e confira em *Mixer → Propriedades Avançadas de Áudio* se o monitoramento está ativo. |
 | `EADDRINUSE: port 8080` | Já existe um bot rodando | Feche a outra janela de terminal. |
@@ -473,7 +501,7 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 ## 📁 Estrutura dos arquivos
 
 ```
-├── index.js           # o bot: Discord, Google Sheets e servidor WebSocket
+├── index.js           # o bot: Discord, Google Sheets (leitura e escrita) e servidor WebSocket
 ├── overlayOBS.html    # o overlay que vai no OBS (HTML, CSS e JS num arquivo só)
 ├── Ficha-CoC-modelo.xlsx  # ficha modelo automática (criada por Alan) — Vida, Sanidade e perícias se calculam sozinhos
 ├── package.json       # lista de dependências
