@@ -41,7 +41,7 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 
 **Exemplo no layout completo (16:9):**
 Veja como as notificações de rolagem se integram de forma limpa e não intrusiva à interface geral da sua transmissão.
-![Exemplo do layout completo em 1080p](assets/exemplo3.jpg)
+![Exemplo em um layout completo](assets/exemplo3.png)
 
 ---
 ## 🔄 Como funciona
