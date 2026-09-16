@@ -23,6 +23,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Personalizando o visual e os sons](#-personalizando-o-visual-e-os-sons)
 - [Deixando o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional)
 - [Problemas comuns](#-problemas-comuns)
+- [Créditos](#-créditos)
 - [Licença](#-licença)
 
 ---
@@ -176,7 +177,7 @@ Clique em **Save Changes**.
 
 ## Passo 5 — Preparar a planilha das fichas
 
-> 💡 **Já tem uma ficha modelo pronta neste repositório** (`Ficha-CoC-modelo.xlsx`), criada pelo **Alan** 🙌. Ela já vem com Vida, Sanidade, atributos e perícias com os cálculos automatizados — é só duplicar e preencher os dados do seu investigador. Baixe o arquivo, suba pro seu Google Drive, abra com o Google Planilhas (botão direito → *Abrir com* → *Google Planilhas*) e siga a partir do passo 5.1 abaixo para liberar o acesso.
+> 💡 **Já tem uma ficha modelo pronta neste repositório** (`Ficha-CoC-modelo.xlsx`), criada pelo **Alan** 🏊‍♂️. Ela é **totalmente automática**: Vida, Sanidade, atributos e perícias já vêm com os cálculos prontos — é só duplicar e preencher os dados do seu investigador que o resto se ajusta sozinho. Baixe o arquivo, suba pro seu Google Drive, abra com o Google Planilhas (botão direito → *Abrir com* → *Google Planilhas*) e siga a partir do passo 5.1 abaixo para liberar o acesso.
 >
 > Ela tem um bug visual leve nas perícias — aparece uma linha preta em algumas células por algum motivo — mas é só estético, não atrapalha os cálculos nem a leitura do bot.
 
@@ -200,7 +201,7 @@ https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz123456/edit?us
 
 Copie **só o trecho entre `/d/` e `/edit`** e cole no bloco de notas em `SPREADSHEET_ID`.
 
-### 5.3 Como a planilha precisa estar organizada
+### 5.3 Como a planilha precisa estar organizada (ignorar caso usar a disponibilizada)
 
 O bot não usa posições fixas de célula (com uma exceção): ele procura padrões de texto dentro do intervalo **A1 até P100** de cada aba. Monte as fichas assim:
 
@@ -449,13 +450,19 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 ```
 ├── index.js           # o bot: Discord, Google Sheets e servidor WebSocket
 ├── overlayOBS.html    # o overlay que vai no OBS (HTML, CSS e JS num arquivo só)
-├── Ficha-CoC-modelo.xlsx  # ficha modelo pronta (criada por Alan), com Vida/Sanidade/perícias calculados
+├── Ficha-CoC-modelo.xlsx  # ficha modelo automática (criada por Alan) — Vida, Sanidade e perícias se calculam sozinhos
 ├── package.json       # lista de dependências
 ├── .env               # suas chaves secretas (você cria, nunca sobe pro GitHub)
 ├── crit.mp3           # som de crítico
 ├── falhacrit.mp3      # som de desastre
 └── diceroll1-3.mp3    # sons de rolagem (sorteados a cada jogada)
 ```
+
+---
+
+## 🏊‍♂️ Créditos
+
+- **Alan** — criou a `Ficha-CoC-modelo.xlsx`, a planilha modelo de investigador usada por este projeto. Ela é totalmente automática: preenche Vida, Sanidade, atributos e perícias sozinha a partir dos dados básicos do personagem, sem precisar mexer em fórmulas.
 
 ---
 
