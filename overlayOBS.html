@@ -249,10 +249,20 @@
         }
 
         function conectar() {
-            const ws = new WebSocket('ws://localhost:8080');
+            const ws = new WebSocket('wss://coc-bot-nj88.onrender.com');
 
             ws.onmessage = function(event) {
                 const dados = JSON.parse(event.data);
+
+                if (dados.tipo === 'historico') {
+                    // Backlog de rolagens que aconteceram enquanto o overlay
+                    // estava desconectado. Renderiza cada uma pra recuperar
+                    // o que foi perdido, mas sem tocar os sons de novo (senão
+                    // tocariam todos de uma vez ao reconectar).
+                    dados.eventos.forEach(renderizarMensagem);
+                    return;
+                }
+
                 renderizarMensagem(dados);
                 tocarSequenciaDeAudio(dados.evento);
             };
