@@ -248,6 +248,76 @@ async function registrarHistoricoRolagem(evento) {
 }
 
 /**
+ * Reconstrói, a partir de uma linha da aba "Rolagens", o mesmo formato de
+ * evento que `transmitirEvento` recebe normalmente — usado para repovoar
+ * `historicoEventos` (o buffer em RAM) a partir do que já está salvo na
+ * planilha assim que o bot sobe. Sem isso, um restart do processo
+ * (redeploy, crash, hibernação no Render) zera o buffer em memória e o
+ * overlay só volta a ver histórico depois que rolagens novas acontecerem
+ * — mesmo a planilha já tendo tudo guardado.
+ *
+ * A distinção "comando" (/rl) vs "rollem" (bot terceiro) é feita pela
+ * presença da coluna Perícia, que só rolagens de /rl preenchem.
+ */
+function eventoAPartirDaLinhaHistorico(row) {
+    const jogador = row.get('Jogador') || '';
+    const pericia = row.get('Pericia') || '';
+    const alvo = row.get('Alvo');
+    const resultado = row.get('Resultado') || '';
+    const status = row.get('Status') || '';
+
+    if (pericia) {
+        // Rolagem estruturada de /rl: a coluna Status guarda o texto
+        // bruto do resultado ("CRÍTICO ABSOLUTO (01)", "DESASTRE",
+        // "SUCESSO..."), não 'crit'/'fail' diretamente (ver
+        // registrarHistoricoRolagem) — por isso o tipo de evento é
+        // inferido a partir desse texto.
+        let evento = 'normal';
+        if (/crítico/i.test(status)) evento = 'crit';
+        else if (/desastre/i.test(status)) evento = 'fail';
+
+        return {
+            tipo: 'comando',
+            jogador,
+            pericia,
+            alvo,
+            valor: resultado,
+            status,
+            vantagem: '',
+            evento,
+        };
+    }
+
+    // Rolagem crua do bot "rollem": aqui a coluna Status já guarda
+    // 'Crítico' / 'Falha' / '' diretamente.
+    let evento = 'normal';
+    if (status === 'Crítico') evento = 'crit';
+    else if (status === 'Falha') evento = 'fail';
+
+    return { tipo: 'rollem', jogador, resultado, evento };
+}
+
+/**
+ * Repovoa `historicoEventos` com as últimas HISTORICO_MAX rolagens já
+ * salvas na aba "Rolagens", lidas diretamente da planilha (offset pelo
+ * total de linhas já contado em `inicializarContagemHistoricoRolagens`,
+ * então não precisa reler a aba inteira). Chamada uma única vez, na
+ * inicialização do bot — depois disso o buffer é mantido normalmente
+ * por `transmitirEvento` a cada rolagem nova.
+ */
+async function carregarHistoricoRecenteDaPlanilha() {
+    try {
+        const sheet = await getOrCriarAbaHistoricoRolagens();
+        const offset = Math.max(0, historicoRolagensContagem - HISTORICO_MAX);
+        const rows = await sheet.getRows({ offset, limit: HISTORICO_MAX });
+        historicoEventos = rows.map(eventoAPartirDaLinhaHistorico);
+        console.log(`Buffer de histórico do overlay repovoado com ${historicoEventos.length} rolagem(ns) vinda(s) da planilha.`);
+    } catch (e) {
+        console.error('Erro ao repovoar o histórico do overlay a partir da planilha:', e);
+    }
+}
+
+/**
  * Lê a aba `sheetTitle` da planilha e extrai atributos, perícias, Sorte,
  * Sanidade e o nome do personagem, populando characterCache/nomeFichaCache.
  *
@@ -399,6 +469,12 @@ client.once('ready', async () => {
     // aba se ainda não existir), pra que a limpeza em lote saiba desde
     // já se precisa rodar assim que novas rolagens começarem a chegar.
     await inicializarContagemHistoricoRolagens();
+
+    // Repovoa o buffer em RAM (historicoEventos) com o que já estava
+    // salvo na planilha, pra que um overlay que conecte logo após um
+    // restart do bot já receba o histórico recente — e não só rolagens
+    // que aconteceram depois da subida do processo.
+    await carregarHistoricoRecenteDaPlanilha();
 
     const commands = [
         new SlashCommandBuilder()
