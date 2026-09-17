@@ -33,6 +33,13 @@ function transmitirEvento(evento) {
             cliente.send(JSON.stringify(evento));
         }
     });
+
+    // Grava no histórico persistente da planilha (aba "Rolagens") em
+    // paralelo. Sem `await` de propósito: isso é uma função síncrona
+    // chamada em pontos onde não queremos atrasar nem o broadcast pro
+    // overlay nem a resposta do comando no Discord — a gravação roda
+    // em segundo plano e qualquer erro fica só no log (ver a função).
+    registrarHistoricoRolagem(evento);
 }
 
 wss.on('connection', (ws) => {
@@ -121,6 +128,122 @@ async function salvarRegistro(userId, ficha) {
         }
     } catch (e) {
         console.error('Erro ao salvar registro na planilha:', e);
+    }
+}
+
+// ---------------------------------------------------------------------
+// Histórico persistente de rolagens (aba "Rolagens").
+//
+// O `historicoEventos` lá em cima é outra coisa: um buffer pequeno (6
+// itens) só pra reenviar as últimas rolagens a quem acabou de conectar
+// no overlay, e que se perde a cada restart do bot porque vive só na
+// RAM. Esta seção é o histórico de verdade — cada rolagem (/rl e
+// Rollem) é gravada numa aba própria da planilha, igual acontece com a
+// aba "Registros", então sobrevive a reinícios, quedas e redeploys.
+//
+// Pra aba não crescer pra sempre, o bot mantém só as últimas
+// HISTORICO_ROLAGENS_MAX linhas. A limpeza roda em lotes de
+// HISTORICO_ROLAGENS_LOTE_LIMPEZA em vez de apagar uma linha a cada
+// rolagem nova — isso evita gastar uma chamada de API extra a cada
+// /rl só pra manter o total redondo (a Google Sheets API tem cota de
+// requisições por minuto, e numa mesa animada isso soma rápido). Na
+// prática a aba pode passar um pouco do limite por um instante (até
+// +HISTORICO_ROLAGENS_LOTE_LIMPEZA linhas) entre uma limpeza e outra,
+// o que não faz diferença nenhuma pra um histórico de rolagens.
+// ---------------------------------------------------------------------
+const HISTORICO_ROLAGENS_SHEET_TITLE = 'Rolagens';
+const HISTORICO_ROLAGENS_MAX = 1000; // reduza aqui se a planilha ficar pesada
+const HISTORICO_ROLAGENS_LOTE_LIMPEZA = 50; // apaga em blocos, não linha a linha
+
+let historicoRolagensContagem = 0; // contagem em memória — evita reler a aba inteira a cada rolagem
+
+async function getOrCriarAbaHistoricoRolagens() {
+    let sheet = doc.sheetsByTitle[HISTORICO_ROLAGENS_SHEET_TITLE];
+    if (!sheet) {
+        sheet = await doc.addSheet({
+            title: HISTORICO_ROLAGENS_SHEET_TITLE,
+            headerValues: ['Data', 'Jogador', 'Pericia', 'Alvo', 'Resultado', 'Status'],
+        });
+        console.log(`Aba "${HISTORICO_ROLAGENS_SHEET_TITLE}" criada na planilha.`);
+    }
+    return sheet;
+}
+
+/**
+ * Lê a aba de histórico uma única vez, na inicialização do bot, só pra
+ * saber quantas linhas já existem. Depois disso a contagem fica só em
+ * memória (incrementada a cada gravação, decrementada a cada limpeza),
+ * pra nunca mais precisar reler a aba inteira só pra saber o tamanho
+ * dela — isso é o que permite decidir "preciso limpar?" sem gastar uma
+ * chamada de leitura da API a cada rolagem.
+ */
+async function inicializarContagemHistoricoRolagens() {
+    try {
+        const sheet = await getOrCriarAbaHistoricoRolagens();
+        const rows = await sheet.getRows();
+        historicoRolagensContagem = rows.length;
+        console.log(`Histórico de rolagens carregado: ${historicoRolagensContagem} linha(s) na aba "${HISTORICO_ROLAGENS_SHEET_TITLE}".`);
+    } catch (e) {
+        console.error('Erro ao inicializar o histórico de rolagens:', e);
+    }
+}
+
+/**
+ * Apaga o excedente mais antigo de uma vez, em lote, quando a aba passa
+ * de HISTORICO_ROLAGENS_MAX + HISTORICO_ROLAGENS_LOTE_LIMPEZA linhas.
+ * As linhas mais antigas são sempre as do topo da aba (logo abaixo do
+ * cabeçalho), então basta pegar as primeiras `excedente` linhas.
+ *
+ * Apaga de trás pra frente dentro do lote (da última linha buscada pra
+ * primeira): apagar uma linha desloca pra cima só as linhas abaixo
+ * dela na planilha, então apagar da mais "de baixo" pra mais "de cima"
+ * evita que o número de linha das outras já buscadas fique
+ * desatualizado no meio do processo.
+ */
+async function apararHistoricoRolagensSeNecessario(sheet) {
+    const excedente = historicoRolagensContagem - HISTORICO_ROLAGENS_MAX;
+    if (excedente < HISTORICO_ROLAGENS_LOTE_LIMPEZA) return;
+
+    try {
+        const linhasAntigas = await sheet.getRows({ offset: 0, limit: excedente });
+        for (let i = linhasAntigas.length - 1; i >= 0; i--) {
+            await linhasAntigas[i].delete();
+            historicoRolagensContagem--;
+        }
+        console.log(`Histórico de rolagens: ${linhasAntigas.length} linha(s) antiga(s) removida(s) (limite: ${HISTORICO_ROLAGENS_MAX}).`);
+    } catch (e) {
+        console.error('Erro ao limpar histórico antigo de rolagens:', e);
+    }
+}
+
+/**
+ * Grava uma linha do evento recebido na aba de histórico. Funciona
+ * tanto para rolagens estruturadas do /rl ("comando", com perícia,
+ * alvo e status separados) quanto para rolagens cruas capturadas do
+ * bot Rollem (que não têm perícia/alvo/status — só o texto original).
+ *
+ * Chamada a partir de `transmitirEvento` sem `await` de propósito (veja
+ * o comentário lá) — erros aqui nunca devem derrubar uma rolagem, por
+ * isso ficam só no log.
+ */
+async function registrarHistoricoRolagem(evento) {
+    try {
+        const sheet = await getOrCriarAbaHistoricoRolagens();
+
+        const linha = {
+            Data: new Date().toLocaleString('pt-BR'),
+            Jogador: evento.jogador || '',
+            Pericia: evento.pericia || '',
+            Alvo: evento.alvo !== undefined ? evento.alvo : '',
+            Resultado: evento.tipo === 'comando' ? evento.valor : (evento.resultado || ''),
+            Status: evento.status || (evento.evento === 'crit' ? 'Crítico' : evento.evento === 'fail' ? 'Falha' : ''),
+        };
+
+        await sheet.addRow(linha);
+        historicoRolagensContagem++;
+        await apararHistoricoRolagensSeNecessario(sheet);
+    } catch (e) {
+        console.error('Erro ao gravar rolagem no histórico da planilha:', e);
     }
 }
 
@@ -271,6 +394,11 @@ client.once('ready', async () => {
         const ok = await syncCharacter(sheetTitle);
         console.log(ok ? `Ficha "${sheetTitle}" resincronizada.` : `Falha ao resincronizar "${sheetTitle}".`);
     }
+
+    // Descobre quantas linhas já existem na aba "Rolagens" (criando a
+    // aba se ainda não existir), pra que a limpeza em lote saiba desde
+    // já se precisa rodar assim que novas rolagens começarem a chegar.
+    await inicializarContagemHistoricoRolagens();
 
     const commands = [
         new SlashCommandBuilder()
