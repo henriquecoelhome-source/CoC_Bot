@@ -81,6 +81,7 @@ O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com 
 | **Overlay no OBS** | Cartão animado na tela, colorido conforme o resultado. |
 | **Sons automáticos** | Som de dado em toda rolagem + som especial em crítico e desastre. |
 | **Suporte ao Rollem** | Rolagens feitas pelo bot Rollem também aparecem no overlay. |
+| **Histórico de rolagens** | Guarda as últimas 1000 rolagens (`/rl` e Rollem) numa aba **Rolagens** da planilha, com data, jogador, perícia, alvo e resultado. |
 
 ---
 
@@ -188,7 +189,7 @@ Clique em **Save Changes**.
 
 ## Passo 4 — Criar a Service Account do Google
 
-O bot não usa mais uma chave de API simples — aquilo só permitia **ler** a planilha. Agora, para guardar os vínculos do `/registrar` direto nela, o bot também precisa **escrever**, e o Google exige uma **Service Account** (uma espécie de "conta robô" com usuário e senha próprios) para isso.
+Para ler a planilha e também gravar os vínculos do `/registrar` direto nela, o bot precisa de uma **Service Account** do Google (uma espécie de "conta robô" com usuário e senha próprios).
 
 1. Acesse **<https://console.cloud.google.com/>** e faça login.
 2. No topo, clique no seletor de projeto → **Novo projeto** → dê um nome → **Criar**.
@@ -410,6 +411,14 @@ O campo `pericia` sugere tudo que o bot leu da ficha daquele jogador — períci
 
 **Vantagem** rola um dado de dezena extra e fica com o menor total. **Desvantagem** fica com o maior.
 
+### 📜 Histórico de rolagens (aba "Rolagens")
+
+Toda rolagem — tanto pelo `/rl` quanto pelo Rollem — fica registrada numa aba **Rolagens** que o bot cria sozinho na planilha na primeira rolagem (igual acontece com a aba Registros). Colunas: `Data`, `Jogador`, `Pericia`, `Alvo`, `Resultado`, `Status`.
+
+O bot mantém só as **últimas 1000 linhas**: sempre que uma rolagem nova é gravada e o total passa de 1000, a mais antiga é apagada automaticamente. Você não precisa fazer nada — só não apague nem renomeie a aba manualmente (se apagar, o bot cria outra em branco e o histórico anterior se perde).
+
+> A gravação acontece em paralelo, sem atrasar a resposta do `/rl` no Discord nem o envio pro overlay. Se der algum erro ao gravar (ex.: planilha sem permissão), ele fica só no log do bot — não quebra a rolagem nem a live.
+
 ### Rolagens pelo Rollem
 
 Se o bot **Rollem** estiver no servidor, qualquer rolagem feita por ele (`2d6+3`, `1d100` etc.) também aparece no overlay, num formato mais simples. O nome exibido é o apelido de quem pediu a rolagem no servidor.
@@ -493,6 +502,9 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 | Overlay em branco no OBS | Endereço do WebSocket errado, ou bot desligado | Passo 8.1 (`ws://localhost:8080`) e confira se o terminal ainda está rodando. |
 | Cartões aparecem, mas sem som | Áudio não roteado | Marque *Controlar áudio via OBS* e confira em *Mixer → Propriedades Avançadas de Áudio* se o monitoramento está ativo. |
 | `EADDRINUSE: port 8080` | Já existe um bot rodando | Feche a outra janela de terminal. |
+| `Error: No key or keyFile set.` (bot crasha, `Exited with status 1`) | `GOOGLE_PRIVATE_KEY` ausente, vazia ou com nome errado nas Environment Variables do serviço na nuvem | Confira as variáveis do serviço certo (não um Env Group vazio) e recadastre `GOOGLE_SERVICE_ACCOUNT_EMAIL` e `GOOGLE_PRIVATE_KEY` — as duas juntas, é comum faltar uma delas. |
+| `A criação da chave da conta de serviço está desativada` / `iam.disableServiceAccountKeyCreation` no Google Cloud | Política de segurança padrão do Google bloqueando chaves de Service Account | Desative a política em **IAM e admin → Políticas da organização** (veja a mesma seção acima) e tente gerar a chave de novo. |
+| Não acho "Environment Variables" no menu do Render | Mudou de lugar/estrutura de Projects, ou não aparece no menu lateral | Acesse direto por `https://dashboard.render.com/web/SEU_SERVICE_ID/env` (o Service ID aparece no topo da página do serviço). |
 
 **Ver o erro do overlay:** botão direito na fonte de navegador → **Interagir** → tecla `F12` abre o console com as mensagens de erro.
 
