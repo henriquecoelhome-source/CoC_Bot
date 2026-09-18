@@ -64,7 +64,7 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
                                                            └──────┬──────┘
                                                                   │ WebSocket (porta 8080)
                                                                   ▼
-                                              overlayOBS.html  ──►  sua live no OBS
+                                                           overlayOBS.html  ──►  sua live no OBS
 ```
 
 O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com o Discord e com o Google (lendo as fichas dos investigadores e também lendo/gravando os vínculos de `/registrar` na aba Registros), e transmite cada rolagem para o `overlayOBS.html`, que você adiciona no OBS como fonte de navegador. **Se o `index.js` estiver desligado, o overlay fica vazio.**
