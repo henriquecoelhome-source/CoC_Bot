@@ -1,3 +1,11 @@
+// ============================================================================
+// ÍNDICE — coisas visuais fáceis de mexer no Discord (procura "GUIA RÁPIDO")
+// - Mensagens de resposta do /registrar ..... linha 487
+// - Mensagem de "não registrou ficha" ....... linha 505
+// - Cores e textos dos resultados (/rl) ..... linha 535
+// - Título, descrição e campos do embed ..... linha 588
+// ============================================================================
+
 require('dotenv').config();
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const WebSocket = require('ws');
@@ -474,6 +482,8 @@ client.on('interactionCreate', async interaction => {
         const busca = interaction.options.getString('personagem').toLowerCase();
         const sheet = doc.sheetsByIndex.find(s => s.title.toLowerCase().includes(busca));
         
+        // GUIA RÁPIDO: mensagens de resposta do /registrar (não achou a aba,
+        // deu certo, ou deu erro ao ler). Texto livre, mantém as "${...}".
         if (!sheet) return interaction.editReply(`Não encontrei aba contendo "${busca}".`);
 
         const sucesso = await syncCharacter(sheet.title);
@@ -490,6 +500,8 @@ client.on('interactionCreate', async interaction => {
         const userId = interaction.user.id;
         const personagem = userCharacters[userId];
 
+        // GUIA RÁPIDO: mensagem que aparece pra quem tenta usar /rl sem
+        // ter registrado uma ficha ainda. Texto livre, pode reescrever.
         if (!personagem) return interaction.reply({ content: 'Use `/registrar [nome]` primeiro.', ephemeral: true });
 
         const periciaNome = interaction.options.getString('pericia');
@@ -522,6 +534,10 @@ client.on('interactionCreate', async interaction => {
         let eventoOBS = 'normal';
         let corEmbed = 0x228B22; 
 
+        // GUIA RÁPIDO: cores e textos do embed no Discord
+        // Cada resultado tem uma cor (hexadecimal, sem precisar do "#") e um
+        // texto próprio. Troca o texto entre aspas ou o número depois do "0x"
+        // à vontade — dá até pra colocar emoji no texto (ex: '💀 **DESASTRE** 💀').
         if (totalFinal === 1) {
             resultadoTexto = '**CRÍTICO ABSOLUTO (01)**';
             corEmbed = 0xFFD700;
@@ -561,6 +577,13 @@ client.on('interactionCreate', async interaction => {
         });
 
         const avisoVant = vantagem === 'V' ? ' *(Vantagem)*' : (vantagem === 'D' ? ' *(Desvantagem)*' : '');
+
+        // GUIA RÁPIDO: layout do embed que aparece no Discord
+        // - setTitle / setDescription: título e linha de baixo do embed. Pode
+        //   reescrever o texto, só mantém as "${variavel}" nos lugares certos.
+        // - addFields: cada { name, value } é uma seção do embed — "name" é o
+        //   título em negrito da seção (ex: "Rolagem", "Status"), "value" é o
+        //   conteúdo dela. Dá pra trocar os nomes ou adicionar um field novo.
         const embed = new EmbedBuilder()
             .setTitle(`${nomeParaOBS} rolou ${periciaNome}`)
             .setDescription(`**Alvo:** ${valorBase}  |  Bom: ${valorBom}  |  Extremo: ${valorExtremo}`)
