@@ -56,11 +56,11 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 ## 🔄 Como funciona
 
 ```
-  Planilha do Google  ◄──lê fichas, lê/grava Registros──►  ┌─────────────┐
+  Planilha do Google  ◄──lê fichas, lê/grava Registros────►┌─────────────┐
                                                            │             │
-  Discord (/rl, /registrar) ──────────────────────────────►│   index.js  │
+  Discord (/rl, /registrar) ─────────────────────────────► │   index.js  │
                                                            │   (o bot)   │
-  Bot Rollem (rolagens soltas) ─────────────────────────► │             │
+  Bot Rollem (rolagens soltas) ─────────────────────────►  │             │
                                                            └──────┬──────┘
                                                                   │ WebSocket (porta 8080)
                                                                   ▼
