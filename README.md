@@ -492,6 +492,15 @@ const ws = new WebSocket('wss://seu-app.onrender.com');
 
 > No plano gratuito do Render o serviço hiberna após um período sem uso e leva alguns segundos para acordar na primeira rolagem.
 
+Para contornar essa hibernação e garantir que o seu overlay responda instantaneamente durante as sessões, você pode usar uma ferramenta externa para manter o servidor sempre acordado (*keep alive*):
+
+1. Acesse o [UptimeRobot](https://uptimerobot.com/).
+2. Logo na página inicial, cole a URL primária do seu serviço gerada pelo Render (certifique-se de usar a que começa com `https://`).
+3. De um nome pro monitoramento se pedir. Siga em frente e faça o login usando a sua conta do Google.
+4. Pronto! O UptimeRobot criará o monitoramento automaticamente com o padrão de 5 em 5 minutos. Com isso, sua aplicação receberá "pings" constantes e o overlay não vai mais dormir durante a partida.
+
+> 💡 **Nota sobre o `index.js`:** Se você observar o código do servidor, vai notar que ele serve uma página web simples (um mini frontend). Isso serve como uma "cara falsa" da aplicação para o UptimeRobot. Como a ferramenta faz o monitoramento simulando o acesso de um navegador comum (via requisição HTTP), o nosso servidor precisa devolver uma página real com sinal verde (Status 200 OK) para confirmar que está online. Sem isso, o UptimeRobot tentaria acessar a URL, não encontraria um site padrão e acharia que o sistema do WebSocket está offline.
+
 ---
 
 ## 🔧 Problemas comuns
