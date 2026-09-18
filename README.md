@@ -2,6 +2,8 @@
 
 Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Google Sheets, rola os testes de d100 aplicando as regras de Call of Cthulhu 7ª edição e mostra o resultado na sua live, em tempo real, com animação e som.
 
+🌐 Este projeto também está disponível em [Inglês](https://github.com/henriquecoelhome-source/CoC_Bot_En.git).
+
 > **Nunca mexeu com programação?** Sem problema. Este guia foi escrito para você seguir do zero, na ordem, sem pular etapas. Leva cerca de 30 a 40 minutos na primeira vez.
 
 ---
