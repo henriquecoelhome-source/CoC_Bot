@@ -345,6 +345,7 @@ O arquivo `overlayOBS.html` vem configurado para um servidor na nuvem. Como voc�
 ```javascript
 const ws = new WebSocket('wss://coc-bot-nj88.onrender.com');
 ```
+Se não encontrar, copie a linha acima, vá para o Bloco de Notas, pressione (Ctrl + F) cole a linha, ou digite parte dela para localizar onde ela aparece no texto.
 
 3. Troque por:
 
