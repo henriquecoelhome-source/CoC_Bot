@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+    ÍNDICE — o que mexer e onde (procura "GUIA RÁPIDO" na linha indicada)
+    - Cores do overlay ................ linha 50  (bloco :root)
+    - Quantos cards ficam na tela ...... linha 171 (const maxMensagens)
+    - Sons da rolagem normal ........... linha 176 (const sonsDeRolagem)
+    - Som de crítico / fumble .......... linha 204-206 (tocarSequenciaDeAudio)
+    - Endereço do servidor WebSocket ... linha 269 (function conectar)
+-->
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -15,10 +23,9 @@
             box-sizing: border-box;
         }
 
-        /* O tamanho de exibição é definido nas Propriedades da fonte de
-           Browser, no OBS (Largura/Altura). Este container ocupa 100% do
-           espaço reservado a ele — ajuste as dimensões da fonte no OBS
-           conforme o espaço disponível na cena. */
+        /* O tamanho real é definido lá no OBS (Propriedades da fonte de
+           Browser > Largura/Altura), então isso aqui só ocupa 100% do
+           espaço que a fonte de browser reservar pra ele. */
         #chat-container {
             width: 100%;
             height: 100%;
@@ -29,6 +36,16 @@
             box-sizing: border-box;
         }
 
+        /* ====================================================================
+           GUIA RÁPIDO — CORES
+           Pra trocar o esquema de cores do overlay, mexe só nessas variáveis
+           aqui embaixo, não precisa procurar cor espalhada pelo CSS todo.
+           - cor-normal: acerto comum
+           - cor-crit: sucesso crítico (100 no d100)
+           - cor-falha: falha crítica (1 no d100 ou fumble)
+           - cor-fundo: fundo dos cards (deixa o "rgba(...)" se quiser manter
+             a transparência, só troca os 3 primeiros números pra mudar o tom)
+           ==================================================================== */
         :root {
             --cor-normal: #ffb648;
             --cor-crit: #2ee673;
@@ -148,41 +165,41 @@
 
     <script>
         const chatContainer = document.getElementById('chat-container');
-        const maxMensagens = 6; // Número de rolagens mantidas visíveis simultaneamente.
 
+        // GUIA RÁPIDO: quantos cards ficam na tela ao mesmo tempo antes do
+        // mais antigo sumir. Sobe esse número se a cena tiver espaço sobrando.
+        const maxMensagens = 6;
+
+        // GUIA RÁPIDO: arquivos de som do dado normal. Pode adicionar ou tirar
+        // itens da lista à vontade, um é escolhido aleatoriamente a cada rolagem.
+        // Os arquivos precisam estar na mesma pasta que este HTML.
         const sonsDeRolagem = ['diceroll1.mp3', 'diceroll2.mp3', 'diceroll3.mp3'];
 
-        /**
-         * Reproduz um arquivo de áudio e resolve a Promise quando a
-         * reprodução termina (ou falha) — garante que a fila de áudio
-         * nunca trave caso o arquivo esteja ausente ou inválido.
-         */
         function tocarSom(src, volume) {
+            // Promise só termina quando o áudio acaba de tocar (ou dá erro) —
+            // assim a fila de sons não trava se um arquivo estiver faltando.
             return new Promise((resolve) => {
                 const audio = new Audio(src);
                 audio.volume = volume;
                 const finalizar = () => resolve();
                 audio.addEventListener('ended', finalizar, { once: true });
                 audio.addEventListener('error', () => {
-                    console.warn(`[overlay] Não consegui carregar o áudio: ${src}`);
+                    console.warn(`[overlay] não achei o áudio: ${src}`);
                     finalizar();
                 }, { once: true });
                 audio.play().catch((erro) => {
-                    console.warn(`[overlay] play() bloqueado/rejeitado para ${src}:`, erro);
+                    console.warn(`[overlay] play() bloqueado: ${erro}`);
                     finalizar();
                 });
             });
         }
 
-        /**
-         * Reproduz o som de rolagem (sorteado entre as variações
-         * disponíveis) e, em sequência, o som de crítico ou falha
-         * crítica, caso aplicável ao evento recebido.
-         */
         async function tocarSequenciaDeAudio(evento) {
             const somRolagem = sonsDeRolagem[Math.floor(Math.random() * sonsDeRolagem.length)];
             await tocarSom(somRolagem, 0.8);
 
+            // GUIA RÁPIDO: som extra depois da rolagem, se for crítico ou fumble.
+            // Troca os nomes dos arquivos ou o volume (0 a 1) aqui.
             if (evento === 'crit') {
                 await tocarSom('crit.mp3', 0.9);
             } else if (evento === 'fail') {
@@ -209,9 +226,8 @@
             div.className = `mensagem ${classeEvento(dados.evento)}`.trim();
 
             if (dados.tipo === 'comando') {
-                // Mensagem estruturada originada do /rl: perícia, alvo e
-                // status em campos separados, sem parênteses ou setas
-                // embutidos no texto.
+                // Card do /rl: perícia, alvo e status já vêm separados,
+                // então dá pra montar o layout sem parsear texto solto.
                 const sufixoVantagem = dados.vantagem ? ` · ${escapeHtml(dados.vantagem)}` : '';
                 div.innerHTML = `
                     <div class="cabecalho">
@@ -228,9 +244,8 @@
                     </div>
                 `;
             } else {
-                // Mensagem crua vinda do bot "rollem": remove a formatação
-                // do Discord e destaca os números, preservando o mesmo
-                // layout visual do card estruturado.
+                // Rolagem crua do bot "rollem": tira a formatação do Discord
+                // (*, _, ~, `) e destaca os números, mas mantém o mesmo visual.
                 const textoLimpo = (dados.resultado || '').replace(/[*_~`]/g, '');
                 const textoFormatado = escapeHtml(textoLimpo).replace(/([0-9]+)/g, '<span class="numero-destaque">$1</span>');
                 div.innerHTML = `
@@ -249,16 +264,17 @@
         }
 
         function conectar() {
+            // GUIA RÁPIDO: endereço do servidor WebSocket do bot. Se trocar
+            // de host (Render, Railway, etc.) o link novo entra aqui.
             const ws = new WebSocket('wss://coc-bot-nj88.onrender.com');
 
             ws.onmessage = function(event) {
                 const dados = JSON.parse(event.data);
 
                 if (dados.tipo === 'historico') {
-                    // Backlog de rolagens que aconteceram enquanto o overlay
-                    // estava desconectado. Renderiza cada uma pra recuperar
-                    // o que foi perdido, mas sem tocar os sons de novo (senão
-                    // tocariam todos de uma vez ao reconectar).
+                    // Backlog de rolagens perdidas enquanto o overlay estava
+                    // desconectado. Renderiza tudo, mas sem som — senão toca
+                    // uma rajada de áudio de uma vez só ao reconectar.
                     dados.eventos.forEach(renderizarMensagem);
                     return;
                 }
@@ -268,6 +284,8 @@
             };
 
             ws.onclose = () => {
+                // Tenta reconectar sozinho depois de 2s (útil se o servidor
+                // reiniciar ou a internet cair por um instante).
                 setTimeout(conectar, 2000);
             };
         }
