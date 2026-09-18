@@ -433,7 +433,11 @@ Se o bot **Rollem** estiver no servidor, qualquer rolagem feita por ele (`2d6+3`
 
 ## 🎨 Personalizando o visual e os sons
 
-Tudo fica no `overlayOBS.html`, no começo do arquivo:
+A melhor parte desse projeto, é que ele é completamente customizavel. O padrão foca em Call of Cthulhu, mas não se prenda a isso: é possível adaptar o overlay e aprimorar o index pra rodar qualquer ficha e sistema.
+
+Mesmo sem saber programar é possivel reestilizar o HTML/CSS para ter qualquer visual. A seguir, mostro como é fácil mexer nos parâmetros para alterar cores, quantidade de mensagens e sons.
+
+Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Cntrl+F pra localizar facilmente):
 
 ```css
 :root {
@@ -445,7 +449,7 @@ Tudo fica no `overlayOBS.html`, no começo do arquivo:
 }
 ```
 
-Quantos cartões ficam na tela ao mesmo tempo (padrão: 6):
+Para alterar quantos cartões ficam na tela ao mesmo tempo (padrão: 6):
 
 ```javascript
 const maxMensagens = 6;
