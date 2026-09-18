@@ -434,7 +434,9 @@ Se o bot **Rollem** estiver no servidor, qualquer rolagem feita por ele (`2d6+3`
 
 ## 🎨 Personalizando o visual e os sons
 
-A melhor parte desse projeto, é que ele é completamente customizavel. O padrão foca em Call of Cthulhu, mas não se prenda a isso: é possível adaptar o overlay e aprimorar o index pra rodar qualquer ficha e sistema.
+A melhor parte desse projeto é que ele é totalmente customizável. O padrão foca em Call of Cthulhu, mas isso é só o ponto de partida: quem quiser pode ir além, adaptando o overlay e o index para rodar qualquer ficha ou sistema — isso já entra em território de programação.
+
+Mas calma, você não precisa saber programar pra fazer a maioria das alterações. Trocar cores, ajustar quantos cards aparecem na tela, o tamanho deles, ou trocar os sons das rolagens e criticos é simples e não exige nenhum conhecimento técnico — só editar alguns valores num arquivo de texto.
 
 >Para fazer essas alterações, você pode usar **qualquer editor de texto** comum (até mesmo o Bloco de Notas). Porém, recomendo muito que você baixe um editor de código leve e gratuito, como o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/). Com a ferramenta certa, a visualização muda da água pro vinho. O editor colore as palavras e, o mais importante, **exibe o número das linhas**. Como eu criei uma espécie de índice indicando exatamente em qual linha você precisa ir para modificar cada coisa, usar um programa desses torna tudo muito mais rápido e fácil.
 
