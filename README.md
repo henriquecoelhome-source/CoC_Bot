@@ -436,6 +436,10 @@ Se o bot **Rollem** estiver no servidor, qualquer rolagem feita por ele (`2d6+3`
 
 A melhor parte desse projeto, é que ele é completamente customizavel. O padrão foca em Call of Cthulhu, mas não se prenda a isso: é possível adaptar o overlay e aprimorar o index pra rodar qualquer ficha e sistema.
 
+>Para fazer essas alterações, você pode usar **qualquer editor de texto** comum (até mesmo o Bloco de Notas). Porém, recomendo muito que você baixe um editor de código leve e gratuito, como o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/). Com a ferramenta certa, a visualização muda da água pro vinho. O editor colore as palavras e, o mais importante, **exibe o número das linhas**. Como eu criei uma espécie de índice indicando exatamente em qual linha você precisa ir para modificar cada coisa, usar um programa desses torna tudo muito mais rápido e fácil.
+
+Não precisa ter medo de mexer: ao abrir o arquivo, você vai notar que o próprio código já te instrui. Deixei vários comentários e o índice mastigado explicando o que cada parte faz, então é só ler, ir na linha certa e alterar os valores.
+
 Mesmo sem saber programar é possivel reestilizar o HTML/CSS para ter qualquer visual. A seguir, mostro como é fácil mexer nos parâmetros para alterar cores, quantidade de mensagens e sons.
 
 Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Cntrl+F pra localizar facilmente):
