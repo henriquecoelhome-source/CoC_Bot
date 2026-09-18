@@ -490,7 +490,8 @@ Depois:
 const ws = new WebSocket('wss://seu-app.onrender.com');
 ```
 
-> No plano gratuito do Render o serviço hiberna após um período sem uso e leva alguns segundos para acordar na primeira rolagem.
+> Com isso está tudo pronto, porém, no plano gratuito do Render o serviço hiberna após um período sem uso e leva alguns segundos para acordar na primeira rolagem.
+
 
 Para contornar essa hibernação e garantir que o seu overlay responda instantaneamente durante as sessões, você pode usar uma ferramenta externa para manter o servidor sempre acordado (*keep alive*):
 
