@@ -436,13 +436,17 @@ Se o bot **Rollem** estiver no servidor, qualquer rolagem feita por ele (`2d6+3`
 
 A melhor parte desse projeto é que ele é totalmente customizável. O padrão foca em Call of Cthulhu, mas isso é só o ponto de partida: quem quiser pode ir além, adaptando o overlay e o index para rodar qualquer ficha ou sistema — isso já entra em território de programação.
 
-Mas calma, você não precisa saber programar pra fazer a maioria das alterações. Trocar cores, ajustar quantos cards aparecem na tela, o tamanho deles, ou trocar os sons das rolagens e criticos é simples e não exige nenhum conhecimento técnico — só editar alguns valores num arquivo de texto.
+Mas calma, você não precisa saber programar pra fazer a maioria das alterações. Trocar cores, ajustar quantos cards aparecem na tela, o tamanho deles, ou trocar os sons das rolagens e críticos é simples e não exige nenhum conhecimento técnico — só editar alguns valores num arquivo de texto.
 
->Para fazer essas alterações, você pode usar **qualquer editor de texto** comum (até mesmo o Bloco de Notas). Porém, recomendo muito que você baixe um editor de código leve e gratuito, como o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/). Com a ferramenta certa, a visualização muda da água pro vinho. O editor colore as palavras e, o mais importante, **exibe o número das linhas**. Como eu criei uma espécie de índice indicando exatamente em qual linha você precisa ir para modificar cada coisa, usar um programa desses torna tudo muito mais rápido e fácil.
+> Para fazer essas alterações, você pode usar **qualquer editor de texto** comum (até mesmo o Bloco de Notas). Porém, recomendo muito que você baixe um editor de código leve e gratuito, como o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/). Com a ferramenta certa, a visualização muda da água pro vinho. O editor colore as palavras e, o mais importante, **exibe o número das linhas**. Como eu criei uma espécie de índice indicando exatamente em qual linha você precisa ir para modificar cada coisa, usar um programa desses torna tudo muito mais rápido e fácil.
 
-A seguir, mostro como mexer nos parâmetros para alterar cores, quantidade de mensagens e sons.
+A seguir, mostro como mexer nos parâmetros para alterar cores, quantidade de mensagens, tamanho e sons.
 
-Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Cntrl+F pra localizar facilmente):
+Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Ctrl+F pra localizar facilmente):
+
+---
+
+### 🎨 Cores
 
 ```css
 :root {
@@ -453,19 +457,52 @@ Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Cntrl+F pra localiza
     --cor-fundo:  rgba(20, 20, 22, 0.92);  /* último número = transparência */
 }
 ```
->  **Como mudar as cores:** Os valores como `#ffb648` são **Códigos Hexadecimais**. Para encontrar a sua própria cor, pesquise por **"Seletor de cores"** no Google, escolha a cor desejada, copie o código com o `#` e cole no arquivo. 
-> *Já para a `--cor-fundo`, que usa `rgba(20, 20, 22, 0.92)`, os três primeiros números são a cor (RGB) e o último (`0.92`) é o nível de transparência (onde `1` é totalmente sólido e `0` é invisível).*
 
-Alterar quantos cartões ficam na tela ao mesmo tempo (padrão: 6):
+> **Como mudar as cores:** os valores como `#ffb648` são **códigos hexadecimais**. Para encontrar a sua própria cor, pesquise por "Seletor de cores" no Google, escolha a cor desejada, copie o código com o `#` e cole no arquivo.
+>
+> Já a `--cor-fundo`, que usa `rgba(20, 20, 22, 0.92)`, funciona diferente: os três primeiros números são a cor (RGB) e o último (`0.92`) é o nível de transparência, onde `1` é totalmente sólido e `0` é invisível.
+
+---
+
+### 🃏 Quantidade de cartões na tela
 
 ```javascript
 const maxMensagens = 6;
 ```
->**Alterar quantos cartões ficam na tela** é intuitivo como pareçe. Só mudar o valor "6"
- 
-**Trocar os sons:** substitua os arquivos `.mp3` mantendo exatamente os mesmos nomes (`diceroll1.mp3`, `diceroll2.mp3`, `diceroll3.mp3`, `crit.mp3`, `falhacrit.mp3`). O volume fica em `tocarSom(somRolagem, 0.8)` — troque `0.8` por um valor entre `0` e `1`.
+
+> Controla quantos cartões ficam visíveis ao mesmo tempo antes do mais antigo sumir (padrão: 6). É só trocar o número — bem intuitivo, sem segredo.
 
 ---
+
+### 📐 Tamanho dos cartões
+
+Essa parte nem precisa mexer no arquivo. O script foi feito pra se adaptar automaticamente ao espaço reservado pra ele — quem define o tamanho real é o próprio OBS, nas propriedades da fonte de Browser.
+
+Pra ajustar:
+
+1. No OBS, clique com o botão direito na fonte do overlay (a Browser Source) e selecione **Propriedades**.
+2. Altere os campos **Largura** e **Altura** pro tamanho que você quiser.
+3. Clique em **OK** — o overlay se redimensiona sozinho, na hora, sem precisar editar nada no código.
+
+> Quanto maior a largura e a altura definidas no OBS, mais espaço os cartões têm pra aparecer. Se eles ficarem cortados ou espremidos, é só aumentar esses valores por ali mesmo.
+
+---
+
+### 🔊 Sons
+
+Substitua os arquivos `.mp3` mantendo exatamente os mesmos nomes:
+
+- `diceroll1.mp3`, `diceroll2.mp3`, `diceroll3.mp3` — sons de rolagem comum (um é sorteado a cada vez)
+- `crit.mp3` — toca depois da rolagem, em caso de crítico
+- `falhacrit.mp3` — toca depois da rolagem, em caso de desastre
+
+O volume fica em:
+
+```javascript
+tocarSom(somRolagem, 0.8);
+```
+
+> Troque `0.8` por um valor entre `0` e `1` pra ajustar o volume.
 
 ## ☁️ Deixando o bot online 24 horas (opcional)
 
