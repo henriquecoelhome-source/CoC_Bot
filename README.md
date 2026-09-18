@@ -448,6 +448,8 @@ Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Cntrl+F pra localiza
     --cor-fundo:  rgba(20, 20, 22, 0.92);  /* último número = transparência */
 }
 ```
+> 💡 **Como mudar as cores (Hexadecimal):** Os valores como `#ffb648` são **Códigos Hexadecimais**. Para encontrar a sua própria cor, pesquise por **"Seletor de cores"** no Google, escolha a cor desejada, copie o código com o `#` e cole no arquivo. 
+> *Já para a `--cor-fundo`, que usa `rgba(20, 20, 22, 0.92)`, os três primeiros números são a cor (RGB) e o último (`0.92`) é o nível de transparência (onde `1` é totalmente sólido e `0` é invisível).*
 
 Para alterar quantos cartões ficam na tela ao mesmo tempo (padrão: 6):
 
