@@ -582,11 +582,11 @@ Se você nunca mexeu com código antes, é normal ficar com receio de estragar a
  Repita comigo **NÃO VOU USAR BLOCO DE NOTAS.** 
 > Sério. Use o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/) como recomendei ali em cima. O Bloco de Notas nativo do Windows não colore o texto, não tem numeração de linha e só vai te fazer passar raiva na hora de achar o que mudar.
 
- **A mágica do Ctrl+Z**
-> Usando um editor de verdade (como o [Sublime](https://www.sublimetext.com/)), você pode fuçar à vontade. Mudou algo? Salva o arquivo (`Ctrl + S`), atualiza no OBS ou no navegador e vê se funcionou. Se o overlay quebrar, é só voltar no editor, dar um `Ctrl + Z` pra desfazer a besteira, salvar e testar de novo. Você faz tudo isso sem precisar fechar o programa e sem o Windows dar aquele erro chato de *"este arquivo está sendo usado e não pode ser modificado"*.
+ **A magia do Ctrl+Z**
+> Usando um editor de verdade (como o [Sublime](https://www.sublimetext.com/)), você pode fuçar à vontade. Mudou algo? Salva o arquivo (`Ctrl + S`), atualiza no OBS ou no navegador e vê se funcionou. Se o overlay quebrar, é só voltar no editor, dar um `Ctrl + Z` pra desfazer a bagunça, salvar e testar de novo. Você faz tudo isso sem precisar fechar o programa e sem o Windows dar aquele erro chato de *"este arquivo está sendo usado e não pode ser modificado"*.
 
- **Quebrou tudo e o Ctrl+Z não resolve mais?**
-> Não entre em pânico e **não baixe o projeto de novo para substituir o arquivo inteiro**. Se você fizer isso, vai perder todas as outras configurações que já ajustou (cores, limite de mensagens, etc). 
+ **Quebrou tudo, nem o Ctrl+Z não resolve mais**
+> **Não baixe o projeto de novo para substituir o arquivo inteiro**. Se você fizer isso, vai perder todas as outras configurações que já ajustou (cores, limite de mensagens, etc). 
 > 
 > A solução é simples: vá até o repositório original do projeto no seu navegador, abra o arquivo original por lá, copie **apenas** o bloco de código que você estragou e cole por cima da parte quebrada no seu computador.>
 
