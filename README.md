@@ -574,6 +574,44 @@ const embed = new EmbedBuilder()
 > - **setTitle / setDescription:** Definem o título principal e a linha descritiva logo abaixo no embed. Reescreva o texto se desejar, mas lembre-se de preservar as variáveis `${variavel}`.
 > - **addFields:** Cada bloco `{ name, value }` é uma seção visual dentro da caixa. O `name` é o título em negrito daquela seção (ex: "Rolagem" ou "Status") e o `value` é o seu conteúdo. Dá pra trocar facilmente esses nomes ou até adicionar um *field* novo na estrutura.
 
+
+### 💡 Dicas (se você quebrar o código)
+
+Se você nunca mexeu com código antes, é normal ficar com receio de estragar alguma coisa. Aqui vão algumas dicas de ouro para você testar e modificar o arquivo sem medo:
+
+> Repita comigo **NÃO VOU USAR BLOCO DE NOTAS.** 
+> Sério. Use o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/) como recomendei ali em cima. O Bloco de Notas nativo do Windows não colore o texto, não tem numeração de linha e só vai te fazer passar raiva na hora de achar o que mudar.
+
+> **A mágica do Ctrl+Z**
+> Usando um editor de verdade (como o [Sublime](https://www.sublimetext.com/)), você pode fuçar à vontade. Mudou algo? Salva o arquivo (`Ctrl + S`), atualiza no OBS ou no navegador e vê se funcionou. Se o overlay quebrar, é só voltar no editor, dar um `Ctrl + Z` pra desfazer a besteira, salvar e testar de novo. Você faz tudo isso sem precisar fechar o programa e sem o Windows dar aquele erro chato de *"este arquivo está sendo usado e não pode ser modificado"*.
+
+> **Quebrou tudo e o Ctrl+Z não resolve mais?**
+> Não entre em pânico e **não baixe o projeto de novo para substituir o arquivo inteiro**. Se você fizer isso, vai perder todas as outras configurações que já ajustou (cores, limite de mensagens, etc). 
+> 
+> A solução é simples: vá até o repositório original do projeto no seu navegador, abra o arquivo original por lá, copie **apenas** o bloco de código que você estragou e cole por cima da parte quebrada no seu computador.>
+>
+> **Como assim "copiar só um pedaço"? (Exemplo prático)**
+> 
+> Quando dizemos "copia o bloco", pode parecer confuso saber onde começa e onde termina. O segredo aqui é usar **dois pontos de referência** (um teto e um chão) ao redor da parte que você acha que quebrou.
+> 
+> Imagine que você estava alterando as cores e o overlay parou de funcionar porque você apagou um ponto e vírgula sem querer. Você não precisa procurar o erro exato, basta fazer o seguinte:
+> 
+> 1. No seu código quebrado, encontre uma linha intacta **antes** da bagunça (exemplo: a linha `:root {`). Esse é o seu Ponto A.
+> 2. Encontre uma linha intacta logo **depois** da bagunça (exemplo: a chave de fechamento `}`). Esse é o seu Ponto B.
+> 3. Vá no código original do repositório.
+> 4. Selecione exatamente do Ponto A até o Ponto B e copie.
+> 5. Volte no seu arquivo quebrado, selecione o mesmo trecho (do Ponto A ao Ponto B) e cole por cima.
+> 
+> Pronto. Pode ser qualquer parte do arquivo, desde que você pegue essas duas "âncoras" iguais nos dois lados. Mesmo que você acabe copiando linhas extras que já estavam certas, colar usando as âncoras garante que você conserte o erro sem duplicar código ou deixar algo pela metade.
+
+> ### ⚡ Mais alguns detalehes pra não se perder:
+> 
+> * **Espaços não importam:** O editor costuma deixar um baita espaço vazio à esquerda do código (indentação) — isso é só pra leitura, apagar ou bagunçar esses espaços não quebra absolutamente nada.
+> * **Cuidado com aspas e ponto-e-vírgula:** Apagar sem querer uma única aspa (`"`) ou um ponto-e-vírgula (`;`) no final da linha é o motivo número 1 de um código parar de funcionar do nada.
+> * **Maiúsculas e minúsculas são diferentes:** O código é chato com isso; se o original estava escrito `maxMensagens`, escrever `maxmensagens` vai fazer o programa não reconhecer o comando.
+> * **Textos "inúteis" (comentários):** Tudo que aparecer no editor depois de `//` ou entre `/*` e `*/` é só uma anotação pra você ler; o computador ignora e você pode apagar ou escrever o que quiser ali.
+> * **Salvou e não mudou nada?** Às vezes o OBS "prende" a versão velha do arquivo. Abra as propriedades da fonte no OBS, desça tudo e clique no botão "Atualizar cache da página atual".
+
 ## ☁️ Deixando o bot online 24 horas (opcional)
 
 Rodando no seu PC, o bot morre junto com o computador. Para deixá-lo sempre ligado, use um serviço de hospedagem como o [Render](https://render.com/).
