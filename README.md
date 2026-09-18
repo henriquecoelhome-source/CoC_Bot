@@ -579,18 +579,18 @@ const embed = new EmbedBuilder()
 
 Se você nunca mexeu com código antes, é normal ficar com receio de estragar alguma coisa. Aqui vão algumas dicas de ouro para você testar e modificar o arquivo sem medo:
 
-> Repita comigo **NÃO VOU USAR BLOCO DE NOTAS.** 
+ Repita comigo **NÃO VOU USAR BLOCO DE NOTAS.** 
 > Sério. Use o [Sublime Text](https://www.sublimetext.com/) ou o [VS Code](https://code.visualstudio.com/) como recomendei ali em cima. O Bloco de Notas nativo do Windows não colore o texto, não tem numeração de linha e só vai te fazer passar raiva na hora de achar o que mudar.
 
-> **A mágica do Ctrl+Z**
+ **A mágica do Ctrl+Z**
 > Usando um editor de verdade (como o [Sublime](https://www.sublimetext.com/)), você pode fuçar à vontade. Mudou algo? Salva o arquivo (`Ctrl + S`), atualiza no OBS ou no navegador e vê se funcionou. Se o overlay quebrar, é só voltar no editor, dar um `Ctrl + Z` pra desfazer a besteira, salvar e testar de novo. Você faz tudo isso sem precisar fechar o programa e sem o Windows dar aquele erro chato de *"este arquivo está sendo usado e não pode ser modificado"*.
 
-> **Quebrou tudo e o Ctrl+Z não resolve mais?**
+ **Quebrou tudo e o Ctrl+Z não resolve mais?**
 > Não entre em pânico e **não baixe o projeto de novo para substituir o arquivo inteiro**. Se você fizer isso, vai perder todas as outras configurações que já ajustou (cores, limite de mensagens, etc). 
 > 
 > A solução é simples: vá até o repositório original do projeto no seu navegador, abra o arquivo original por lá, copie **apenas** o bloco de código que você estragou e cole por cima da parte quebrada no seu computador.>
->
-> **Como assim "copiar só um pedaço"? (Exemplo prático)**
+
+ **Como assim "copiar só um pedaço"? (Exemplo prático)**
 > 
 > Quando dizemos "copia o bloco", pode parecer confuso saber onde começa e onde termina. O segredo aqui é usar **dois pontos de referência** (um teto e um chão) ao redor da parte que você acha que quebrou.
 > 
@@ -605,7 +605,7 @@ Se você nunca mexeu com código antes, é normal ficar com receio de estragar a
 > Pronto. Pode ser qualquer parte do arquivo, desde que você pegue essas duas "âncoras" iguais nos dois lados. Mesmo que você acabe copiando linhas extras que já estavam certas, colar usando as âncoras garante que você conserte o erro sem duplicar código ou deixar algo pela metade.
 
  ### ⚡ Mais alguns detalehes pra não se perder:
-> 
+ 
 > * **Espaços não importam:** O editor costuma deixar um baita espaço vazio à esquerda do código (indentação) — isso é só pra leitura, apagar ou bagunçar esses espaços não quebra absolutamente nada.
 > * **Cuidado com aspas e ponto-e-vírgula:** Apagar sem querer uma única aspa (`"`) ou um ponto-e-vírgula (`;`) no final da linha é o motivo número 1 de um código parar de funcionar do nada.
 > * **Maiúsculas e minúsculas são diferentes:** O código é chato com isso; se o original estava escrito `maxMensagens`, escrever `maxmensagens` vai fazer o programa não reconhecer o comando.
