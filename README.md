@@ -504,6 +504,76 @@ tocarSom(somRolagem, 0.8);
 
 > Troque `0.8` por um valor entre `0` e `1` pra ajustar o volume.
 
+---
+
+## 🤖 Personalizando as mensagens e o visual no Discord
+
+Além do overlay para o OBS, você também pode personalizar as respostas do bot e o visual das rolagens diretamente no Discord. Tudo isso fica no arquivo `index.js`. 
+
+No topo do arquivo, há um **ÍNDICE** indicando as linhas exatas de onde modificar cada coisa, ou você pode usar o atalho Ctrl+F no seu editor e buscar por "GUIA RÁPIDO" para pular direto para as seções configuráveis.
+
+A seguir, mostro como mexer nos principais parâmetros de mensagens:
+
+---
+
+### 💬 Mensagens de resposta do /registrar
+
+```javascript
+if (!sheet) return interaction.editReply(`Não encontrei aba contendo "${busca}".`);
+// ...
+interaction.editReply(`Conta vinculada com sucesso à **${sheet.title}**!`);
+// ...
+interaction.editReply(`Erro ao ler a ficha **${sheet.title}**.`);
+```
+
+> **Como mudar os textos:** O texto dentro das crases (\`) é livre e você pode reescrever as mensagens de sucesso, erro ou de ficha não encontrada como preferir. O único cuidado importante é **manter os trechos com `${...}`** (como `${busca}` e `${sheet.title}` nos lugares certos), pois é ali que o bot injeta os nomes dinamicamente.
+
+---
+
+### ⚠️ Mensagem de "Não registrou ficha"
+
+```javascript
+if (!personagem) return interaction.reply({ content: 'Use `/registrar [nome]` primeiro.', ephemeral: true });
+```
+
+> Essa é a mensagem de aviso que aparece para quem tenta usar o comando `/rl` sem ter vinculado uma conta a uma ficha antes. É só trocar a frase entre aspas simples para algo da sua preferência (o texto é livre).
+
+---
+
+### 🎨 Cores e textos dos resultados (/rl)
+
+```javascript
+if (totalFinal === 1) {
+    resultadoTexto = '**CRÍTICO ABSOLUTO (01)**';
+    corEmbed = 0xFFD700;
+// ...
+} else if (isFumble) {
+    resultadoTexto = '**DESASTRE**';
+    corEmbed = 0x8B0000;
+```
+
+> **Textos:** Você pode alterar as palavras que definem o resultado da rolagem entre aspas à vontade, podendo inclusive adicionar emojis (exemplo: `'💀 **DESASTRE** 💀'`).
+>
+> **Cores:** Aqui, o bot também usa códigos hexadecimais para colorir a barrinha lateral da caixa de mensagem no Discord. A única diferença para o CSS é que, em vez do tradicional `#`, você usa `0x` antes do código (ex: `0xFFD700` é amarelo). É só trocar os números e letras depois do `0x` pela cor que você preferir.
+
+---
+
+### 🗂️ Layout do Embed (Caixa de mensagem)
+
+```javascript
+const embed = new EmbedBuilder()
+    .setTitle(`${nomeParaOBS} rolou ${periciaNome}`)
+    .setDescription(`**Alvo:** ${valorBase}  |  Bom: ${valorBom}  |  Extremo: ${valorExtremo}`)
+    .addFields(
+        { name: `Rolagem${avisoVant}`, value: `Dezena(s): ...` },
+        { name: 'Status', value: resultadoTexto }
+    )
+```
+
+> Essa parte constrói a "caixinha" (Embed) da rolagem que aparece no chat.
+> - **setTitle / setDescription:** Definem o título principal e a linha descritiva logo abaixo no embed. Reescreva o texto se desejar, mas lembre-se de preservar as variáveis `${variavel}`.
+> - **addFields:** Cada bloco `{ name, value }` é uma seção visual dentro da caixa. O `name` é o título em negrito daquela seção (ex: "Rolagem" ou "Status") e o `value` é o seu conteúdo. Dá pra trocar facilmente esses nomes ou até adicionar um *field* novo na estrutura.
+
 ## ☁️ Deixando o bot online 24 horas (opcional)
 
 Rodando no seu PC, o bot morre junto com o computador. Para deixá-lo sempre ligado, use um serviço de hospedagem como o [Render](https://render.com/).
