@@ -604,13 +604,15 @@ Se você nunca mexeu com código antes, é normal ficar com receio de estragar a
 > 
 > Pronto. Pode ser qualquer parte do arquivo, desde que você pegue essas duas "âncoras" iguais nos dois lados. Mesmo que você acabe copiando linhas extras que já estavam certas, colar usando as âncoras garante que você conserte o erro sem duplicar código ou deixar algo pela metade.
 
-> ### ⚡ Mais alguns detalehes pra não se perder:
+ ### ⚡ Mais alguns detalehes pra não se perder:
 > 
 > * **Espaços não importam:** O editor costuma deixar um baita espaço vazio à esquerda do código (indentação) — isso é só pra leitura, apagar ou bagunçar esses espaços não quebra absolutamente nada.
 > * **Cuidado com aspas e ponto-e-vírgula:** Apagar sem querer uma única aspa (`"`) ou um ponto-e-vírgula (`;`) no final da linha é o motivo número 1 de um código parar de funcionar do nada.
 > * **Maiúsculas e minúsculas são diferentes:** O código é chato com isso; se o original estava escrito `maxMensagens`, escrever `maxmensagens` vai fazer o programa não reconhecer o comando.
 > * **Textos "inúteis" (comentários):** Tudo que aparecer no editor depois de `//` ou entre `/*` e `*/` é só uma anotação pra você ler; o computador ignora e você pode apagar ou escrever o que quiser ali.
 > * **Salvou e não mudou nada?** Às vezes o OBS "prende" a versão velha do arquivo. Abra as propriedades da fonte no OBS, desça tudo e clique no botão "Atualizar cache da página atual".
+
+---
 
 ## ☁️ Deixando o bot online 24 horas (opcional)
 
