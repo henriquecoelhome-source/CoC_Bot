@@ -174,7 +174,6 @@ Ficha-CoC-modelo.xlsx
 Ainda na aba **Bot**, role até **Privileged Gateway Intents** e **ative**:
 
 - [x] **MESSAGE CONTENT INTENT**
-- [x] **SERVER MEMBERS INTENT**
 
 Clique em **Save Changes**.
 
@@ -320,10 +319,12 @@ node index.js
 Se tudo estiver certo, aparece algo como:
 
 ```
-Servidor WebSocket iniciado — aguardando conexões do overlay na porta 8080.
+Servidor iniciado — aguardando conexões do overlay na porta 8080.
 Bot conectado como SeuBot#1234!
 Planilha "Fichas CoC" carregada com sucesso!
 Registros carregados da planilha: 0 vínculo(s) de usuário → ficha.
+Histórico de rolagens carregado: 0 linha(s) na aba "Rolagens".
+Buffer de histórico do overlay repovoado com 0 rolagem(ns) vinda(s) da planilha.
 ```
 
 Na primeiríssima vez, o bot cria sozinho uma aba **Registros** na planilha (com as colunas `UserID` e `Ficha`) para guardar os vínculos do `/registrar` — não precisa criar essa aba na mão. Nas próximas vezes que o bot ligar, aparecerá também uma linha por ficha já registrada, tipo `Ficha "Ficha 1 (Arthur)" resincronizada.`, confirmando que os jogadores não vão precisar rodar `/registrar` de novo.
@@ -466,22 +467,7 @@ const maxMensagens = 6;
 
 Rodando no seu PC, o bot morre junto com o computador. Para deixá-lo sempre ligado, use um serviço de hospedagem como o [Render](https://render.com/).
 
-**Antes de subir, edite o `index.js`.** Hoje a porta está fixa:
-
-```javascript
-const wss = new WebSocket.Server({ port: 8080 });
-```
-
-Serviços de nuvem exigem que o programa use a porta que **eles** definem. Troque por:
-
-```javascript
-const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
-```
-
-Assim continua usando 8080 na sua máquina e a porta correta na nuvem.
-
-Depois:
+**Não precisa editar nada no `index.js` para isso.** O bot já vem pronto para nuvem: ele detecta a porta que o serviço de hospedagem define (`process.env.PORT`) e cai de volta pra 8080 se rodar local, sem precisar mudar nada. É só subir o projeto.
 
 1. Suba o projeto para um repositório no GitHub (**sem o `.env`**).
 2. No Render, crie um **Web Service** conectado a esse repositório.
@@ -503,14 +489,14 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 3. De um nome pro monitoramento se pedir. Siga em frente e faça o login usando a sua conta do Google.
 4. Pronto! O UptimeRobot criará o monitoramento automaticamente com o padrão de 5 em 5 minutos. Com isso, sua aplicação receberá "pings" constantes e o overlay não vai mais dormir durante a partida.
 
-> 💡 **Nota sobre o `index.js`:** A rota que serve o HTML básico atua exclusivamente como um *healthcheck endpoint*. Como o monitoramento do UptimeRobot via HTTP(S) faz apenas requisições padrão e não realiza o *handshake* para protocolo WebSocket, o Express precisa garantir o retorno explícito de um `HTTP 200 OK` na rota raiz (`/`). Sem isso, o *ping* via HTTP falharia, derrubando o monitoramento e permitindo a hibernação da instância no Render.
+> 💡 **Nota sobre o `index.js`:** A rota que serve o HTML básico atua exclusivamente como um *healthcheck endpoint*. Como o monitoramento do UptimeRobot via HTTP(S) faz apenas requisições padrão e não realiza o *handshake* para protocolo WebSocket, o servidor HTTP embutido no bot (módulo `http` nativo do Node, sem Express) precisa garantir o retorno explícito de um `HTTP 200 OK` na rota raiz (`/`). Sem isso, o *ping* via HTTP falharia, derrubando o monitoramento e permitindo a hibernação da instância no Render.
 ---
 
 ## 🔧 Problemas comuns
 
 | Sintoma | Causa provável | Solução |
 |---|---|---|
-| `Used disallowed intents` ao iniciar | Intents privilegiadas desligadas | Volte ao [Passo 3.3](#33-ligar-a-permissão-de-leitura-de-mensagens-) e ative *Message Content* e *Server Members*. |
+| `Used disallowed intents` ao iniciar | Intent privilegiada desligada | Volte ao [Passo 3.3](#33-ligar-a-permissão-de-leitura-de-mensagens-) e ative *Message Content*. |
 | `An invalid token was provided` | Token errado ou com espaço sobrando | Resete o token no Developer Portal e cole de novo no `.env`. |
 | O bot liga, mas `/rl` não aparece no Discord | Comandos ainda propagando | Espere alguns minutos e reinicie o app do Discord (`Ctrl + R`). |
 | `The caller does not have permission` | Planilha não compartilhada com a Service Account | Passo 5.1: link em **Editor**, ou compartilhe direto com o `client_email` da Service Account. |
