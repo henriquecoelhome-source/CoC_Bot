@@ -400,7 +400,7 @@ O campo tem autocompletar com os nomes das abas da planilha. A resposta é priva
 ```
 
 O campo `pericia` sugere tudo que o bot leu da ficha daquele jogador — perícias, atributos, Sorte e Sanidade.
-Ao digitar o comando, o auto completar já sugere os comandos e pericias conforme for sendo digitado, assim nao tendo q escrever corretamente o nome completo da perícia. 
+Ao começar a digitar o comando, o auto completar também já sugere os comandos possíveis, assim não tendo q escrever corretamente o nome completo dos comandos ou perícias. 
 
 ### Tabela de resultados
 
