@@ -500,8 +500,7 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 3. De um nome pro monitoramento se pedir. Siga em frente e faça o login usando a sua conta do Google.
 4. Pronto! O UptimeRobot criará o monitoramento automaticamente com o padrão de 5 em 5 minutos. Com isso, sua aplicação receberá "pings" constantes e o overlay não vai mais dormir durante a partida.
 
-> 💡 **Nota sobre o `index.js`:** Se você observar o código do servidor, vai notar que ele serve uma página web simples (um mini frontend). Isso serve como uma "cara falsa" da aplicação para o UptimeRobot. Como a ferramenta faz o monitoramento simulando o acesso de um navegador comum (via requisição HTTP), o nosso servidor precisa devolver uma página real com sinal verde (Status 200 OK) para confirmar que está online. Sem isso, o UptimeRobot tentaria acessar a URL, não encontraria um site padrão e acharia que o sistema do WebSocket está offline.
-
+> 💡 **Nota sobre o `index.js`:** A rota que serve o HTML básico atua exclusivamente como um *healthcheck endpoint*. Como o monitoramento do UptimeRobot via HTTP(S) faz apenas requisições padrão e não realiza o *handshake* para protocolo WebSocket, o Express precisa garantir o retorno explícito de um `HTTP 200 OK` na rota raiz (`/`). Sem isso, o *ping* via HTTP falharia, derrubando o monitoramento e permitindo a hibernação da instância no Render.
 ---
 
 ## 🔧 Problemas comuns
