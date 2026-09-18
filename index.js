@@ -4,23 +4,15 @@ const WebSocket = require('ws');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
-// ---------------------------------------------------------------------
-// Servidor WebSocket — canal de eventos para o overlay do OBS.
-// Toda rolagem de dados detectada (via /rl ou observação do bot "rollem")
-// é retransmitida em tempo real para os clientes conectados nesta porta.
-// ---------------------------------------------------------------------
+// WebSocket pro overlay do OBS — toda rolagem (via /rl ou bot rollem) é
+// retransmitida em tempo real pra quem tiver conectado nessa porta.
 const PORT = process.env.PORT || 8080;
 const wss = new WebSocket.Server({ port: PORT });
 console.log(`Servidor WebSocket iniciado — aguardando conexões do overlay na porta ${PORT}.`);
 
-// ---------------------------------------------------------------------
-// Histórico de eventos — buffer com as últimas rolagens transmitidas.
-// Sem isso, um evento só chega a quem já estava conectado no instante
-// exato do broadcast: se o overlay cair e reconectar (queda de rede,
-// reload da fonte de navegador no OBS etc.), tudo que rolou nesse meio
-// tempo se perde, porque o servidor nunca guardava nada, só repassava.
-// Ao conectar, o overlay agora recebe esse histórico de uma vez.
-// ---------------------------------------------------------------------
+// Buffer com as últimas rolagens, pra mandar de uma vez pro overlay quando
+// ele reconecta (queda de rede, reload da fonte no OBS etc). Antes era só
+// broadcast puro e quem não tava conectado no momento perdia o evento.
 const HISTORICO_MAX = 6; // mesmo valor de maxMensagens no overlay
 let historicoEventos = [];
 
@@ -34,11 +26,8 @@ function transmitirEvento(evento) {
         }
     });
 
-    // Grava no histórico persistente da planilha (aba "Rolagens") em
-    // paralelo. Sem `await` de propósito: isso é uma função síncrona
-    // chamada em pontos onde não queremos atrasar nem o broadcast pro
-    // overlay nem a resposta do comando no Discord — a gravação roda
-    // em segundo plano e qualquer erro fica só no log (ver a função).
+    // sem await de propósito — não quero atrasar o broadcast nem a resposta
+    // do comando por causa da planilha, roda em background
     registrarHistoricoRolagem(evento);
 }
 
@@ -52,17 +41,9 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
 });
 
-// ---------------------------------------------------------------------
-// Integração com Google Sheets — fonte de dados das fichas de personagem
-// e, agora, também onde ficam salvos os vínculos usuário → ficha.
-//
-// Antes a autenticação era só com uma API key, que só permite leitura.
-// Para gravar dados na planilha (a persistência dos registros, logo
-// abaixo) é preciso uma Service Account do Google, com permissão de
-// edição — as credenciais vêm de variáveis de ambiente, nunca ficam
-// hardcoded aqui. Veja o README para o passo a passo de como gerar
-// essas credenciais e compartilhar a planilha com a Service Account.
-// ---------------------------------------------------------------------
+// Google Sheets = fonte das fichas de personagem e onde salvamos os
+// vínculos usuário → ficha. Precisa de Service Account (não só API key)
+// pra poder escrever. Credenciais vêm do .env, ver README pra gerar.
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 const serviceAccountAuth = new JWT({
     email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
@@ -71,24 +52,15 @@ const serviceAccountAuth = new JWT({
 });
 const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
 
-// userCharacters:   mapeia o ID do usuário do Discord à aba (ficha) vinculada.
-// characterCache:   cache dos atributos/perícias já lidos de cada ficha.
-// nomeFichaCache:   cache do nome do personagem extraído da própria ficha.
+// userCharacters: userId -> aba vinculada. characterCache: atributos/perícias
+// já lidos. nomeFichaCache: nome do personagem extraído da ficha.
 const userCharacters = {};
 const characterCache = {};
 const nomeFichaCache = {};
 
-// ---------------------------------------------------------------------
-// Persistência dos vínculos usuário → ficha (comando /registrar).
-//
-// userCharacters vivia só em memória (RAM do processo): qualquer
-// reinício do processo Node apagava tudo sem deixar rastro — inclusive
-// todo deploy novo no Render, já que lá o disco local é efêmero (some
-// a cada redeploy, não só quando o serviço hiberna). Por isso os
-// vínculos agora moram numa aba própria da planilha ("Registros"),
-// que é externa ao servidor: sobrevive a qualquer redeploy, crash ou
-// hibernação, porque não depende do disco do bot.
-// ---------------------------------------------------------------------
+// userCharacters vivia só em RAM e sumia a cada redeploy no Render (disco
+// é efêmero lá). Agora os vínculos ficam numa aba própria ("Registros"),
+// que sobrevive a restart/crash/redeploy.
 const REGISTROS_SHEET_TITLE = 'Registros';
 
 async function getOrCriarAbaRegistros() {
@@ -131,26 +103,11 @@ async function salvarRegistro(userId, ficha) {
     }
 }
 
-// ---------------------------------------------------------------------
-// Histórico persistente de rolagens (aba "Rolagens").
-//
-// O `historicoEventos` lá em cima é outra coisa: um buffer pequeno (6
-// itens) só pra reenviar as últimas rolagens a quem acabou de conectar
-// no overlay, e que se perde a cada restart do bot porque vive só na
-// RAM. Esta seção é o histórico de verdade — cada rolagem (/rl e
-// Rollem) é gravada numa aba própria da planilha, igual acontece com a
-// aba "Registros", então sobrevive a reinícios, quedas e redeploys.
-//
-// Pra aba não crescer pra sempre, o bot mantém só as últimas
-// HISTORICO_ROLAGENS_MAX linhas. A limpeza roda em lotes de
-// HISTORICO_ROLAGENS_LOTE_LIMPEZA em vez de apagar uma linha a cada
-// rolagem nova — isso evita gastar uma chamada de API extra a cada
-// /rl só pra manter o total redondo (a Google Sheets API tem cota de
-// requisições por minuto, e numa mesa animada isso soma rápido). Na
-// prática a aba pode passar um pouco do limite por um instante (até
-// +HISTORICO_ROLAGENS_LOTE_LIMPEZA linhas) entre uma limpeza e outra,
-// o que não faz diferença nenhuma pra um histórico de rolagens.
-// ---------------------------------------------------------------------
+// Histórico de verdade das rolagens (aba "Rolagens") — o historicoEventos
+// lá em cima é só o buffer de 6 pra repovoar o overlay, esse aqui é
+// persistente. Mantém só as últimas HISTORICO_ROLAGENS_MAX linhas, limpando
+// em lotes pra não gastar uma chamada de API a cada /rl só pra manter o
+// total redondo (a aba pode passar um pouco do limite entre limpezas, sem problema).
 const HISTORICO_ROLAGENS_SHEET_TITLE = 'Rolagens';
 const HISTORICO_ROLAGENS_MAX = 1000; // reduza aqui se a planilha ficar pesada
 const HISTORICO_ROLAGENS_LOTE_LIMPEZA = 50; // apaga em blocos, não linha a linha
@@ -169,14 +126,8 @@ async function getOrCriarAbaHistoricoRolagens() {
     return sheet;
 }
 
-/**
- * Lê a aba de histórico uma única vez, na inicialização do bot, só pra
- * saber quantas linhas já existem. Depois disso a contagem fica só em
- * memória (incrementada a cada gravação, decrementada a cada limpeza),
- * pra nunca mais precisar reler a aba inteira só pra saber o tamanho
- * dela — isso é o que permite decidir "preciso limpar?" sem gastar uma
- * chamada de leitura da API a cada rolagem.
- */
+// Lê a aba uma vez na inicialização só pra saber o tamanho atual; depois
+// disso a contagem é mantida em memória (sem reler a aba a cada rolagem).
 async function inicializarContagemHistoricoRolagens() {
     try {
         const sheet = await getOrCriarAbaHistoricoRolagens();
@@ -188,18 +139,8 @@ async function inicializarContagemHistoricoRolagens() {
     }
 }
 
-/**
- * Apaga o excedente mais antigo de uma vez, em lote, quando a aba passa
- * de HISTORICO_ROLAGENS_MAX + HISTORICO_ROLAGENS_LOTE_LIMPEZA linhas.
- * As linhas mais antigas são sempre as do topo da aba (logo abaixo do
- * cabeçalho), então basta pegar as primeiras `excedente` linhas.
- *
- * Apaga de trás pra frente dentro do lote (da última linha buscada pra
- * primeira): apagar uma linha desloca pra cima só as linhas abaixo
- * dela na planilha, então apagar da mais "de baixo" pra mais "de cima"
- * evita que o número de linha das outras já buscadas fique
- * desatualizado no meio do processo.
- */
+// Apaga o excedente antigo em lote quando passa do limite. Apaga de trás
+// pra frente dentro do lote pra não bagunçar o índice das linhas já buscadas.
 async function apararHistoricoRolagensSeNecessario(sheet) {
     const excedente = historicoRolagensContagem - HISTORICO_ROLAGENS_MAX;
     if (excedente < HISTORICO_ROLAGENS_LOTE_LIMPEZA) return;
@@ -216,16 +157,8 @@ async function apararHistoricoRolagensSeNecessario(sheet) {
     }
 }
 
-/**
- * Grava uma linha do evento recebido na aba de histórico. Funciona
- * tanto para rolagens estruturadas do /rl ("comando", com perícia,
- * alvo e status separados) quanto para rolagens cruas capturadas do
- * bot Rollem (que não têm perícia/alvo/status — só o texto original).
- *
- * Chamada a partir de `transmitirEvento` sem `await` de propósito (veja
- * o comentário lá) — erros aqui nunca devem derrubar uma rolagem, por
- * isso ficam só no log.
- */
+// Grava uma linha na aba de histórico. Funciona tanto pra rolagens
+// estruturadas do /rl quanto pras cruas do bot Rollem (sem perícia/alvo).
 async function registrarHistoricoRolagem(evento) {
     try {
         const sheet = await getOrCriarAbaHistoricoRolagens();
@@ -247,18 +180,9 @@ async function registrarHistoricoRolagem(evento) {
     }
 }
 
-/**
- * Reconstrói, a partir de uma linha da aba "Rolagens", o mesmo formato de
- * evento que `transmitirEvento` recebe normalmente — usado para repovoar
- * `historicoEventos` (o buffer em RAM) a partir do que já está salvo na
- * planilha assim que o bot sobe. Sem isso, um restart do processo
- * (redeploy, crash, hibernação no Render) zera o buffer em memória e o
- * overlay só volta a ver histórico depois que rolagens novas acontecerem
- * — mesmo a planilha já tendo tudo guardado.
- *
- * A distinção "comando" (/rl) vs "rollem" (bot terceiro) é feita pela
- * presença da coluna Perícia, que só rolagens de /rl preenchem.
- */
+// Reconstrói o formato de evento a partir de uma linha da aba "Rolagens",
+// pra repovoar o buffer em RAM no boot. A distinção comando/rollem é pela
+// coluna Perícia (só /rl preenche).
 function eventoAPartirDaLinhaHistorico(row) {
     const jogador = row.get('Jogador') || '';
     const pericia = row.get('Pericia') || '';
@@ -267,11 +191,8 @@ function eventoAPartirDaLinhaHistorico(row) {
     const status = row.get('Status') || '';
 
     if (pericia) {
-        // Rolagem estruturada de /rl: a coluna Status guarda o texto
-        // bruto do resultado ("CRÍTICO ABSOLUTO (01)", "DESASTRE",
-        // "SUCESSO..."), não 'crit'/'fail' diretamente (ver
-        // registrarHistoricoRolagem) — por isso o tipo de evento é
-        // inferido a partir desse texto.
+        // rolagem de /rl: Status guarda o texto bruto ("CRÍTICO ABSOLUTO (01)",
+        // "DESASTRE"...), então o tipo de evento é inferido daí
         let evento = 'normal';
         if (/crítico/i.test(status)) evento = 'crit';
         else if (/desastre/i.test(status)) evento = 'fail';
@@ -288,8 +209,7 @@ function eventoAPartirDaLinhaHistorico(row) {
         };
     }
 
-    // Rolagem crua do bot "rollem": aqui a coluna Status já guarda
-    // 'Crítico' / 'Falha' / '' diretamente.
+    // rolagem crua do rollem: aqui Status já vem 'Crítico'/'Falha'/'' direto
     let evento = 'normal';
     if (status === 'Crítico') evento = 'crit';
     else if (status === 'Falha') evento = 'fail';
@@ -297,14 +217,8 @@ function eventoAPartirDaLinhaHistorico(row) {
     return { tipo: 'rollem', jogador, resultado, evento };
 }
 
-/**
- * Repovoa `historicoEventos` com as últimas HISTORICO_MAX rolagens já
- * salvas na aba "Rolagens", lidas diretamente da planilha (offset pelo
- * total de linhas já contado em `inicializarContagemHistoricoRolagens`,
- * então não precisa reler a aba inteira). Chamada uma única vez, na
- * inicialização do bot — depois disso o buffer é mantido normalmente
- * por `transmitirEvento` a cada rolagem nova.
- */
+// Repovoa historicoEventos com as últimas HISTORICO_MAX linhas da planilha,
+// usando o offset já contado em inicializarContagemHistoricoRolagens.
 async function carregarHistoricoRecenteDaPlanilha() {
     try {
         const sheet = await getOrCriarAbaHistoricoRolagens();
@@ -317,17 +231,9 @@ async function carregarHistoricoRecenteDaPlanilha() {
     }
 }
 
-/**
- * Lê a aba `sheetTitle` da planilha e extrai atributos, perícias, Sorte,
- * Sanidade e o nome do personagem, populando characterCache/nomeFichaCache.
- *
- * A extração é feita por reconhecimento de padrão de texto (rótulos e
- * marcadores como "%"), não por posição fixa de célula — isso torna a
- * leitura resiliente a pequenas variações de layout entre fichas.
- *
- * @param {string} sheetTitle - Título da aba correspondente à ficha.
- * @returns {Promise<boolean>} true se a sincronização foi concluída com sucesso.
- */
+// Lê a aba e extrai atributos, perícias, Sorte, Sanidade e o nome do
+// personagem. Reconhece por padrão de texto (rótulos, "%") em vez de
+// posição fixa, então tolera variação de layout entre fichas.
 async function syncCharacter(sheetTitle) {
     try {
         const sheet = doc.sheetsByTitle[sheetTitle];
@@ -342,10 +248,8 @@ async function syncCharacter(sheetTitle) {
             stats['Sanidade'] = celulaSanidade.value;
         }
 
-        // Perícias seguem o padrão "Nome (xx%)" — ex.: "Lutar (Briga) (25%)",
-        // "Psicologia (10%)", "Esquivar (metade da DES%)". Identificamos a
-        // célula por esse padrão textual (e não por posição/coluna), já que
-        // atributos (FOR, DES...) e demais campos não seguem essa notação.
+        // Perícias seguem o padrão "Nome (xx%)" — ex.: "Lutar (Briga) (25%)".
+        // Pego pelo texto, não por coluna, porque atributos não têm essa notação.
         const padraoPericiaTeste = /\([^()]*%[^()]*\)/;
         const padraoPericiaRemover = /\([^()]*%[^()]*\)/g;
 
@@ -360,10 +264,8 @@ async function syncCharacter(sheetTitle) {
                 const textoCelula = cell.value.replace(/\n/g, ' ').trim();
                 if (!textoCelula) continue;
 
-                // Nome do personagem: o rótulo "Nome:" ocupa uma célula e o
-                // valor (em célula mesclada, ex.: D3:F3) fica deslocado à
-                // direita. Testamos alguns deslocamentos até localizar uma
-                // string não vazia.
+                // "Nome:" fica numa célula e o valor (mesclado, ex D3:F3) fica
+                // deslocado à direita — testa alguns offsets até achar algo
                 if (/^nome:?$/i.test(textoCelula)) {
                     for (const offset of [1, 2, 3]) {
                         const valorCell = sheet.getCell(r, c + offset);
@@ -383,10 +285,8 @@ async function syncCharacter(sheetTitle) {
                         .trim();
 
                     if (statName) {
-                        // O valor da perícia normalmente fica 2 colunas à direita
-                        // do nome (a célula intermediária fica vazia devido à
-                        // mesclagem). Caso não seja encontrado, tenta 1 coluna
-                        // à direita como alternativa.
+                        // valor geralmente 2 colunas à direita (a do meio some
+                        // por causa da mesclagem); se não achar, tenta 1 coluna
                         let valor;
                         for (const offset of [2, 1]) {
                             const valorCell = sheet.getCell(r, c + offset);
@@ -421,10 +321,8 @@ async function syncCharacter(sheetTitle) {
                     continue;
                 }
 
-                // Sanidade: "Sanidade" é apenas o título da seção; o valor
-                // "Atual" fica em uma das linhas logo abaixo (o mesmo rótulo
-                // "Atual" também aparece nas seções de Vida e Magia, por isso
-                // a busca é restrita à vizinhança imediata do título).
+                // "Sanidade" é só o título da seção — o "Atual" fica logo abaixo.
+                // Restringe a busca à vizinhança pra não pegar o Atual de Vida/Magia.
                 if (/^sanidade$/i.test(textoCelula) && !stats['Sanidade']) {
                     for (let r2 = r + 1; r2 <= r + 3 && r2 < 100 && !stats['Sanidade']; r2++) {
                         for (let c2 = 0; c2 < 16; c2++) {
@@ -455,9 +353,8 @@ client.once('ready', async () => {
     await doc.loadInfo();
     console.log(`Planilha "${doc.title}" carregada com sucesso!`);
 
-    // Restaura os vínculos usuário → ficha salvos na planilha e resincroniza
-    // o cache de cada ficha envolvida, para que /rl já funcione sem que
-    // ninguém precise rodar /registrar de novo depois de um restart.
+    // restaura os vínculos salvos e resincroniza as fichas, pra /rl já
+    // funcionar sem precisar rodar /registrar de novo após um restart
     await carregarRegistros();
     const fichasParaResincronizar = new Set(Object.values(userCharacters));
     for (const sheetTitle of fichasParaResincronizar) {
@@ -465,15 +362,10 @@ client.once('ready', async () => {
         console.log(ok ? `Ficha "${sheetTitle}" resincronizada.` : `Falha ao resincronizar "${sheetTitle}".`);
     }
 
-    // Descobre quantas linhas já existem na aba "Rolagens" (criando a
-    // aba se ainda não existir), pra que a limpeza em lote saiba desde
-    // já se precisa rodar assim que novas rolagens começarem a chegar.
     await inicializarContagemHistoricoRolagens();
 
-    // Repovoa o buffer em RAM (historicoEventos) com o que já estava
-    // salvo na planilha, pra que um overlay que conecte logo após um
-    // restart do bot já receba o histórico recente — e não só rolagens
-    // que aconteceram depois da subida do processo.
+    // repovoa o buffer em RAM pra overlay que reconectar logo após o restart
+    // já ver histórico recente, não só rolagens que acontecerem daqui pra frente
     await carregarHistoricoRecenteDaPlanilha();
 
     const commands = [
@@ -493,14 +385,9 @@ client.once('ready', async () => {
     await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
 });
 
-// =====================================================================
-// FONTE 1 — Observação de rolagens do bot "rollem"
-//
-// O bot escuta as mensagens desse bot terceiro no canal, interpreta o
-// texto da rolagem (1d100, múltiplas rolagens, notação com colchetes)
-// e classifica o resultado como crítico, falha crítica ou normal antes
-// de retransmitir o evento para o overlay.
-// =====================================================================
+// ---- FONTE 1: observa as rolagens do bot "rollem" no canal, parseia o
+// texto (1d100, colchetes etc) e classifica crítico/falha antes de
+// retransmitir pro overlay ----
 client.on('messageCreate', async (message) => {
   if (message.author.username !== 'rollem') return;
 
@@ -510,9 +397,8 @@ client.on('messageCreate', async (message) => {
       const mensagemOriginal = await message.channel.messages.fetch(message.reference.messageId);
       let membro = mensagemOriginal.member;
 
-      // Nem sempre a mensagem buscada traz o membro embutido (ex.: cache
-      // desatualizado). Nesse caso, busca o membro diretamente na guild
-      // para exibir o apelido do servidor em vez do nome global do Discord.
+      // às vezes o member não vem embutido (cache desatualizado) — busca
+      // direto na guild pra pegar o apelido do servidor
       if (!membro && message.guild) {
         try {
           membro = await message.guild.members.fetch(mensagemOriginal.author.id);
@@ -559,9 +445,7 @@ client.on('messageCreate', async (message) => {
   transmitirEvento({ tipo: 'rollem', jogador: jogador, resultado: textoOriginal, evento: tipoEvento });
 });
 
-// =====================================================================
-// FONTE 2 — Comandos slash (/registrar e /rl)
-// =====================================================================
+// ---- FONTE 2: comandos slash (/registrar e /rl) ----
 client.on('interactionCreate', async interaction => {
     if (interaction.isAutocomplete() && interaction.commandName === 'rl') {
         const userId = interaction.user.id;
