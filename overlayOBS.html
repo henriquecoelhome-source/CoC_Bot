@@ -266,7 +266,7 @@
         function conectar() {
             // GUIA RÁPIDO: endereço do servidor WebSocket do bot. Se trocar
             // de host (Render, Railway, etc.) o link novo entra aqui.
-            const ws = new WebSocket('wss://coc-bot-nj88.onrender.com');
+            const ws = new WebSocket('wss://coc-bot-nj44.onrender.com');
 
             ws.onmessage = function(event) {
                 const dados = JSON.parse(event.data);
