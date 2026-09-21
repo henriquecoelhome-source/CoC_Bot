@@ -358,8 +358,15 @@ async function syncCharacter(sheetTitle) {
 
 client.once('ready', async () => {
     console.log(`Bot conectado como ${client.user.tag}!`);
-    await doc.loadInfo();
-    console.log(`Planilha "${doc.title}" carregada com sucesso!`);
+
+    try {
+        await doc.loadInfo();
+        console.log(`Planilha "${doc.title}" carregada com sucesso!`);
+    } catch (e) {
+        console.error('ERRO ao carregar a planilha (checa GOOGLE_PRIVATE_KEY / GOOGLE_SERVICE_ACCOUNT_EMAIL / SPREADSHEET_ID):', e);
+        return; // não adianta seguir sem a planilha
+    }
+
 
     // restaura os vínculos salvos e resincroniza as fichas, pra /rl já
     // funcionar sem precisar rodar /registrar de novo após um restart
@@ -597,4 +604,8 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.on('error', (e) => console.error('Erro no client Discord:', e));
+
+client.login(process.env.DISCORD_TOKEN)
+    .then(() => console.log('login() resolvido, aguardando evento ready...'))
+    .catch((e) => console.error('ERRO no login do Discord (checa DISCORD_TOKEN):', e));
