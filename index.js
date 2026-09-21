@@ -7,7 +7,7 @@
 // ============================================================================
 
 require('dotenv').config();
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const WebSocket = require('ws');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
@@ -478,7 +478,7 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
     if (interaction.commandName === 'registrar') {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const busca = interaction.options.getString('personagem').toLowerCase();
         const sheet = doc.sheetsByIndex.find(s => s.title.toLowerCase().includes(busca));
         
@@ -502,13 +502,13 @@ client.on('interactionCreate', async interaction => {
 
         // GUIA RÁPIDO: mensagem que aparece pra quem tenta usar /rl sem
         // ter registrado uma ficha ainda. Texto livre, pode reescrever.
-        if (!personagem) return interaction.reply({ content: 'Use `/registrar [nome]` primeiro.', ephemeral: true });
+       if (!personagem) return interaction.reply({ content: 'Use `/registrar [nome]` primeiro.', flags: MessageFlags.Ephemeral });
 
         const periciaNome = interaction.options.getString('pericia');
         const vantagem = interaction.options.getString('vantagem'); 
         const valorBase = characterCache[personagem][periciaNome];
         
-        if (valorBase === undefined) return interaction.reply({ content: `Perícia **${periciaNome}** não encontrada.`, ephemeral: true });
+        if (valorBase === undefined) return interaction.reply({ content: `Perícia **${periciaNome}** não encontrada.`, flags: MessageFlags.Ephemeral });
 
         const unidade = Math.floor(Math.random() * 10);
         const numDadosDezena = (vantagem === 'V' || vantagem === 'D') ? 2 : 1;
