@@ -48,6 +48,7 @@ wss.on('connection', (ws) => {
 const client = new Client({ 
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
 });
+client.on('debug', (info) => console.log('[DEBUG]', info));
 
 // Google Sheets = fonte das fichas de personagem e onde salvamos os
 // vínculos usuário → ficha. Precisa de Service Account (não só API key)
