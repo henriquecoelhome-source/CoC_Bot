@@ -92,6 +92,8 @@ Restrições: valores precisam ser numéricos reais (`45`, não `45%`). Nome da 
 
 ### `/registrar`
 
+Pré-condição: a ficha do jogador precisa existir como uma aba própria dentro da mesma planilha compartilhada (não uma planilha separada por jogador) — geralmente duplicando a aba modelo.
+
 ```
 /registrar personagem: <nome da aba>
 ```
