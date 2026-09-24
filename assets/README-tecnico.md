@@ -1,6 +1,6 @@
 # 🎲 Bot de Call of Cthulhu + Overlay para OBS — Referência técnica
 
-> Versão direta (Pra quem sabe o que ta fazendo). Para o passo a passo guiado, veja o [`README.md`](README.md).
+> Versão direta (Pra quem sabe o que ta fazendo). Para o passo a passo guiado, veja o [`README.md`](../README.md).
 
 ---
 
