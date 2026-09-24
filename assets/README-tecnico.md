@@ -72,7 +72,7 @@ Sem espaços em volta do `=`. `.gitignore` deve conter `.env` e `node_modules`.
 
 ---
 
-## Formato da planilha
+## Formato da planilha (ignorar caso usar a disponibilizada)
 
 Uma aba por investigador. Leitura por padrão de texto no intervalo **A1:P100** (não por posição fixa), exceto Sanidade.
 
