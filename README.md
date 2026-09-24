@@ -4,9 +4,9 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 🌐 Este projeto também está disponível em [Inglês](https://github.com/henriquecoelhome-source/CoC_Bot_En.git).
 
-> 🎯 **Só quer o bot de rolagens, sem exibir nada no OBS?** Você só precisa dos **Passos 1 a 7**. O [Passo 8](#passo-8--colocar-o-overlay-no-obs) e a seção de [personalização do visual/sons](#-personalizando-o-visual-e-os-sons) são só pra quem vai usar o overlay na live, pode pular direto pra [Como usar na mesa](#-como-usar-na-mesa) depois do Passo 7.
-
 > **Nunca mexeu com programação?** Sem problema. Este guia foi escrito para você seguir do zero, na ordem, sem pular etapas. Leva cerca de 30 a 40 minutos na primeira vez.
+
+> 🎯 **Só quer o bot de rolagens, sem exibir nada no OBS?** Você só precisa dos **Passos 1 a 7**. O [Passo 8](#passo-8--colocar-o-overlay-no-obs) e a seção de [personalização do visual/sons](#-personalizando-o-visual-e-os-sons) são só pra quem vai usar o overlay na live — pode pular direto pra [Como usar na mesa](#-como-usar-na-mesa) depois do Passo 7.
 
 ---
 
@@ -643,6 +643,15 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 4. Pronto! O UptimeRobot criará o monitoramento automaticamente com o padrão de 5 em 5 minutos. Com isso, sua aplicação receberá "pings" constantes e o overlay não vai mais dormir durante a partida.
 
 > 💡 **Nota sobre o `index.js`:** A rota que serve o HTML básico atua exclusivamente como um *healthcheck endpoint*. Como o monitoramento do UptimeRobot via HTTP(S) faz apenas requisições padrão e não realiza o *handshake* para protocolo WebSocket, o servidor HTTP embutido no bot (módulo `http` nativo do Node, sem Express) precisa garantir o retorno explícito de um `HTTP 200 OK` na rota raiz (`/`). Sem isso, o *ping* via HTTP falharia, derrubando o monitoramento e permitindo a hibernação da instância no Render.
+
+> ⚠️ **O bot parou de responder do nada, sem eu ter mudado nada?** Isso já aconteceu e não é bug do bot: os IPs de saída do Render (`74.220.50.0/24` e `74.220.58.0/24`, conferíveis no botão *Connect* do dashboard) são compartilhados com muitos outros serviços. Se algum deles abusar da API do Discord, o Discord pode bloquear o bloco inteiro temporariamente — derrubando, ao mesmo tempo, bots sem nenhuma relação entre si, até em contas diferentes do Render. Costuma normalizar sozinho em algumas horas. Se quiser fugir do problema de vez, as opções são:
+> - **Render com [Dedicated IP](https://render.com/docs/dedicated-static-outbound-ip)** — add-on pago, sem precisar trocar de hospedagem.
+> - **Oracle Cloud "Always Free"** — VM de graça pra sempre com IP fixo, mas a aprovação da conta é famosa por ser complicada (às vezes recusam ou banem sem motivo claro).
+> - **VM gratuita do Google Cloud** — também de graça, com IP fixo; deixando a VM sempre ligada não tem custo extra pelo IP. Só que não tem região no Brasil (só EUA), pede cartão de crédito no cadastro (sem cobrança se ficar dentro do limite) e o free tier só cobre 1GB de saída de dados por mês pra fora da América do Norte. Pra economizar, dá pra deixar ligada só quando for usar (dias de sessão ou fins de semana), manual ou programado pra ligar sozinho.
+> - **[Discloud](https://discloud.com)** ou **[Square Cloud](https://squarecloud.app)** — hospedagens de bot mantidas por comunidades brasileiras no Discord. A Discloud ainda tem camada gratuita (mas às vezes fecha novos cadastros por estar lotada); a Square Cloud, pela documentação oficial dela, hoje pede plano pago pra hospedar bot. Nenhuma das duas divulga IP de saída fixo como recurso, então vale confirmar/testar antes de migrar.
+>
+> Diferente do Render, Oracle e Google Cloud não têm deploy automático — é preciso configurar o servidor na mão (abrir porta, rodar o `index.js` como serviço, etc.), o que exige saber um pouco de programação. Nada que uma IA (ChatGPT, Claude) não te guie passo a passo, mas é mais trabalho que o "conecta o GitHub e pronto" do Render.
+
 ---
 
 ## 🔧 Problemas comuns
@@ -664,6 +673,7 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 | `Error: No key or keyFile set.` (bot crasha, `Exited with status 1`) | `GOOGLE_PRIVATE_KEY` ausente, vazia ou com nome errado nas Environment Variables do serviço na nuvem | Confira as variáveis do serviço certo (não um Env Group vazio) e recadastre `GOOGLE_SERVICE_ACCOUNT_EMAIL` e `GOOGLE_PRIVATE_KEY` — as duas juntas, é comum faltar uma delas. |
 | `A criação da chave da conta de serviço está desativada` / `iam.disableServiceAccountKeyCreation` no Google Cloud | Política de segurança padrão do Google bloqueando chaves de Service Account | Desative a política em **IAM e admin → Políticas da organização** (veja a mesma seção acima) e tente gerar a chave de novo. |
 | Não acho "Environment Variables" no menu do Render | Mudou de lugar/estrutura de Projects, ou não aparece no menu lateral | Acesse direto por `https://dashboard.render.com/web/SEU_SERVICE_ID/env` (o Service ID aparece no topo da página do serviço). |
+| Bot para de responder do nada, mesmo sem mudar nada no código, e todos os outros bots seus no Render também caem juntos | IP de saída compartilhado do Render foi bloqueado temporariamente pelo Discord | Veja a nota em [Deixando o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional). |
 
 **Ver o erro do overlay:** botão direito na fonte de navegador → **Interagir** → tecla `F12` abre o console com as mensagens de erro.
 
