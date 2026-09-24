@@ -6,6 +6,8 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 > **Nunca mexeu com programação?** Sem problema. Este guia foi escrito para você seguir do zero, na ordem, sem pular etapas. Leva cerca de 30 a 40 minutos na primeira vez.
 
+> ⚡ **Já sabe o que está fazendo?** Pule direto para a [versão técnica](assets/README-tecnico.md).
+
 > 🎯 **Só quer o bot de rolagens, sem exibir nada no OBS?** Você só precisa dos **Passos 1 a 7**. O [Passo 8](#passo-8--colocar-o-overlay-no-obs) e a seção de [personalização do visual/sons](#-personalizando-o-visual-e-os-sons) são só pra quem vai usar o overlay na live — pode pular direto pra [Como usar na mesa](#-como-usar-na-mesa) depois do Passo 7.
 
 ---
