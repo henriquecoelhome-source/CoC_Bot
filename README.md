@@ -386,9 +386,9 @@ Se não aparecer nada: clique com o botão direito na fonte → **Interagir**, e
 ## 🎮 Como usar na mesa
 
 ### `/registrar`
-
-Cada jogador roda uma vez, no início:
-
+ 
+Cada jogador roda uma vez, no início — mas antes disso, cada um precisa ter sua própria ficha como **uma aba dentro da mesma planilha** (geralmente duplicando a aba modelo), não uma planilha separada por jogador:
+ 
 ```
 /registrar personagem: Ficha 1 (Arthur)
 ```
