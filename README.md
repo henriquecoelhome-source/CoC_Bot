@@ -4,7 +4,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 🌐 Este projeto também está disponível em [Inglês](https://github.com/henriquecoelhome-source/CoC_Bot_En.git).
 
-> **Nunca mexeu com programação?** Sem problema. Este guia foi escrito para você seguir do zero, na ordem, sem pular etapas. Leva cerca de 30 a 40 minutos na primeira vez.
+> ⁉ **Nunca mexeu com programação?** Sem problema. Este guia foi escrito para você seguir do zero, na ordem, sem pular etapas. Leva cerca de 30 a 40 minutos na primeira vez.
 
 > ⚡ **Já sabe o que está fazendo?** Pule direto para a [versão técnica](assets/README-tecnico.md).
 
