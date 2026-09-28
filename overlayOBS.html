@@ -1,11 +1,15 @@
 <!DOCTYPE html>
 <!--
-    ÍNDICE — o que mexer e onde (procura "GUIA RÁPIDO" na linha indicada)
-    - Cores do overlay ................ linha 50  (bloco :root)
-    - Quantos cards ficam na tela ...... linha 171 (const maxMensagens)
-    - Sons da rolagem normal ........... linha 176 (const sonsDeRolagem)
-    - Som de crítico / fumble .......... linha 204-206 (tocarSequenciaDeAudio)
-    - Endereço do servidor WebSocket ... linha 269 (function conectar)
+    ÍNDICE — o que mexer e onde (dá Ctrl+F em "GUIA RÁPIDO" que você
+    pula direto pra cada ponto)
+    - Cores do overlay ................ linha 53    (bloco :root)
+    - Endereço / porta do bot ......... linha 183   (const enderecoDoBot)
+    - Quantos cards ficam na tela ...... linha 187   (const maxMensagens)
+    - Sons da rolagem normal ........... linha 192   (const sonsDeRolagem)
+    - Som de crítico / fumble .......... linha 220-222 (função tocarSequenciaDeAudio)
+    - Conexão com o bot ................ linha 282   (function conectar)
+    Se você editar o arquivo, os números de linha andam: nesse caso, busca
+    pelo nome que está entre parênteses.
 -->
 <html lang="pt-BR">
 <head>
@@ -166,6 +170,18 @@
     <script>
         const chatContainer = document.getElementById('chat-container');
 
+        // GUIA RÁPIDO: endereço do bot. Do jeito que vem, ele procura o bot
+        // no seu próprio computador, na porta 8080, então se você roda o
+        // bot na sua máquina não precisa mexer aqui.
+        // Só troque se:
+        //  - o bot estiver em outra porta → muda o 8080 (a porta aparece
+        //    no terminal quando o bot liga);
+        //  - você hospedou o bot na nuvem (Render etc.) → cola o endereço
+        //    dele, começando com wss:// (com "s"), ex.: 'wss://seu-app.onrender.com'.
+        // Repara: local é "ws://" e nuvem é "wss://". Errar isso é o motivo
+        // nº 1 de "o overlay não mostra nada".
+        const enderecoDoBot = 'ws://localhost:8080';
+
         // GUIA RÁPIDO: quantos cards ficam na tela ao mesmo tempo antes do
         // mais antigo sumir. Sobe esse número se a cena tiver espaço sobrando.
         const maxMensagens = 6;
@@ -176,8 +192,8 @@
         const sonsDeRolagem = ['diceroll1.mp3', 'diceroll2.mp3', 'diceroll3.mp3'];
 
         function tocarSom(src, volume) {
-            // Promise só termina quando o áudio acaba de tocar (ou dá erro) —
-            // assim a fila de sons não trava se um arquivo estiver faltando.
+            // A Promise só termina quando o áudio acaba (ou dá erro), assim a
+            // fila de sons não trava se faltar algum arquivo.
             return new Promise((resolve) => {
                 const audio = new Audio(src);
                 audio.volume = volume;
@@ -226,8 +242,8 @@
             div.className = `mensagem ${classeEvento(dados.evento)}`.trim();
 
             if (dados.tipo === 'comando') {
-                // Card do /rl: perícia, alvo e status já vêm separados,
-                // então dá pra montar o layout sem parsear texto solto.
+                // Card do /rl: perícia, alvo e status já vêm separados do
+                // bot, então não precisa interpretar texto solto.
                 const sufixoVantagem = dados.vantagem ? ` · ${escapeHtml(dados.vantagem)}` : '';
                 div.innerHTML = `
                     <div class="cabecalho">
@@ -244,8 +260,8 @@
                     </div>
                 `;
             } else {
-                // Rolagem crua do bot "rollem": tira a formatação do Discord
-                // (*, _, ~, `) e destaca os números, mas mantém o mesmo visual.
+                // Rolagem do bot Rollem: tira a formatação do Discord
+                // (*, _, ~, `) e destaca os números, mantendo o mesmo visual.
                 const textoLimpo = (dados.resultado || '').replace(/[*_~`]/g, '');
                 const textoFormatado = escapeHtml(textoLimpo).replace(/([0-9]+)/g, '<span class="numero-destaque">$1</span>');
                 div.innerHTML = `
@@ -264,17 +280,27 @@
         }
 
         function conectar() {
-            // GUIA RÁPIDO: endereço do servidor WebSocket do bot. Se trocar
-            // de host (Render, Railway, etc.) o link novo entra aqui.
-            const ws = new WebSocket('wss://coc-bot-nj44.onrender.com');
+            let ws;
+            try {
+                ws = new WebSocket(enderecoDoBot);
+            } catch (erro) {
+                console.error(`[overlay] endereço do bot inválido: "${enderecoDoBot}" (precisa começar com ws:// ou wss://)`);
+                return;
+            }
 
             ws.onmessage = function(event) {
-                const dados = JSON.parse(event.data);
+                let dados;
+                try {
+                    dados = JSON.parse(event.data);
+                } catch (erro) {
+                    console.warn('[overlay] mensagem ilegível do bot, ignorei.');
+                    return;
+                }
 
                 if (dados.tipo === 'historico') {
-                    // Backlog de rolagens perdidas enquanto o overlay estava
-                    // desconectado. Renderiza tudo, mas sem som — senão toca
-                    // uma rajada de áudio de uma vez só ao reconectar.
+                    // Rolagens que aconteceram enquanto o overlay estava
+                    // desconectado. Renderiza tudo, mas sem som, senão
+                    // toca uma rajada de áudio de uma vez ao reconectar.
                     dados.eventos.forEach(renderizarMensagem);
                     return;
                 }
@@ -284,8 +310,8 @@
             };
 
             ws.onclose = () => {
-                // Tenta reconectar sozinho depois de 2s (útil se o servidor
-                // reiniciar ou a internet cair por um instante).
+                // Tenta reconectar sozinho depois de 2s (serve se o
+                // servidor reiniciar ou a internet cair um instante).
                 setTimeout(conectar, 2000);
             };
         }
