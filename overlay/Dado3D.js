@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------
 // Dado D10 3D (trapezoedro pentagonal), desenhado num <canvas> 2D.
-// Usado pelo overlayOBS3D.html: cada dado da rolagem ganha o seu canvas.
+// Usado pelo Dados3D.html: cada dado da rolagem ganha o seu canvas.
 //
 // Importante: este arquivo NÃO sorteia nada. O número quem decide é o
 // bot (index.js); o dado 3D só gira até a face certa (rolarPara) pra
