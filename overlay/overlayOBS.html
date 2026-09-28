@@ -188,8 +188,8 @@
 
         // GUIA RÁPIDO: arquivos de som do dado normal. Pode adicionar ou tirar
         // itens da lista à vontade, um é escolhido aleatoriamente a cada rolagem.
-        // Os arquivos precisam estar na mesma pasta que este HTML.
-        const sonsDeRolagem = ['diceroll1.mp3', 'diceroll2.mp3', 'diceroll3.mp3'];
+        // Os arquivos ficam na pasta "sons", que precisa estar ao lado deste HTML.
+        const sonsDeRolagem = ['sons/diceroll1.mp3', 'sons/diceroll2.mp3', 'sons/diceroll3.mp3'];
 
         function tocarSom(src, volume) {
             // A Promise só termina quando o áudio acaba (ou dá erro), assim a
@@ -217,9 +217,9 @@
             // GUIA RÁPIDO: som extra depois da rolagem, se for crítico ou fumble.
             // Troca os nomes dos arquivos ou o volume (0 a 1) aqui.
             if (evento === 'crit') {
-                await tocarSom('crit.mp3', 0.9);
+                await tocarSom('sons/crit.mp3', 0.9);
             } else if (evento === 'fail') {
-                await tocarSom('falhacrit.mp3', 0.9);
+                await tocarSom('sons/falhacrit.mp3', 0.9);
             }
         }
 
