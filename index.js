@@ -1,22 +1,39 @@
 // ============================================================================
 // ÍNDICE — coisas visuais fáceis de mexer no Discord (procura "GUIA RÁPIDO")
-// - Mensagens de resposta do /registrar ..... linha 487
-// - Mensagem de "não registrou ficha" ....... linha 505
-// - Cores e textos dos resultados (/rl) ..... linha 535
-// - Título, descrição e campos do embed ..... linha 588
+// - Mensagens de resposta do /registrar ..... linha 523
+// - Mensagem de "não registrou ficha" ....... linha 541
+// - Cores e textos dos resultados (/rl) ..... linha 575
+// - Título, descrição e campos do embed ..... linha 619
 // ============================================================================
 
 require('dotenv').config();
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, MessageFlags, Events } = require('discord.js');
+const http = require('http');
 const WebSocket = require('ws');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
-// WebSocket pro overlay do OBS — toda rolagem (via /rl ou bot rollem) é
+// Rede de segurança: se alguma promessa falhar sem tratamento (ex.: um
+// autocomplete que demorou mais de 3s pro Discord e expirou), o Node por
+// padrão derruba o bot inteiro. Aqui só registra o erro no log e segue.
+process.on('unhandledRejection', (erro) => {
+    console.error('Erro não tratado (o bot continua rodando):', erro);
+});
+
+// Servidor do overlay do OBS — toda rolagem (via /rl ou bot rollem) é
 // retransmitida em tempo real pra quem tiver conectado nessa porta.
+// O WebSocket roda em cima de um servidor HTTP simples: quem entra pela
+// rota normal (/) recebe só um "200 OK". Isso serve pra hospedagem e pro
+// UptimeRobot testarem se o bot está vivo, já que eles não fazem WebSocket.
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT });
-console.log(`Servidor WebSocket iniciado — aguardando conexões do overlay na porta ${PORT}.`);
+const servidor = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('Bot de CoC online.');
+});
+const wss = new WebSocket.Server({ server: servidor });
+servidor.listen(PORT, () => {
+    console.log(`Servidor WebSocket iniciado — aguardando conexões do overlay na porta ${PORT}.`);
+});
 
 // Buffer com as últimas rolagens, pra mandar de uma vez pro overlay quando
 // ele reconecta (queda de rede, reload da fonte no OBS etc). Antes era só
@@ -48,7 +65,18 @@ wss.on('connection', (ws) => {
 const client = new Client({ 
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] 
 });
-client.on('debug', (info) => console.log('[DEBUG]', info));
+
+// Debug do Discord: desligado por padrão, pra não encher o terminal (e pra
+// print de erro não sair cheio de linha à toa). Pra ligar, coloque
+// DEBUG_DISCORD=true no .env (ou nas Environment Variables do Render).
+if (process.env.DEBUG_DISCORD === 'true') {
+    client.on('debug', (info) => {
+        const texto = String(info);
+        if (/heartbeat/i.test(texto)) return; // ignora o "tum-tum" que se repete o tempo todo
+        const token = process.env.DISCORD_TOKEN;
+        console.log('[DEBUG]', token ? texto.replaceAll(token, '***') : texto);
+    });
+}
 
 // Google Sheets = fonte das fichas de personagem e onde salvamos os
 // vínculos usuário → ficha. Precisa de Service Account (não só API key)
@@ -357,7 +385,9 @@ async function syncCharacter(sheetTitle) {
     }
 }
 
-client.once('ready', async () => {
+// Events.ClientReady funciona em todas as versões do discord.js (o nome do
+// evento mudou de 'ready' pra 'clientReady' e isso evita o aviso de obsoleto).
+client.once(Events.ClientReady, async () => {
     console.log(`Bot conectado como ${client.user.tag}!`);
 
     try {
