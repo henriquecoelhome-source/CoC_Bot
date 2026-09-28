@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay OBS — Dados D10 3D</title>
+
+    <!--
+    ============================================================================
+    ÍNDICE — coisas fáceis de mexer neste arquivo
+    Dá um Ctrl+F por "GUIA RÁPIDO" que você pula direto pros pontos.
+
+    - Endereço do bot (WebSocket) ............ CFG.url
+    - Cores do overlay ....................... :root { --cor-* }
+    - Tamanho dos dados ...................... CFG.tamanho
+    - Onde os dados aparecem na tela ......... CFG.zona*
+    - Quanto tempo ficam na tela ............. CFG.vida
+    - Quantos resultados ao mesmo tempo ...... CFG.maxGrupos
+    - Mostrar legenda (nome + valor) ......... CFG.legenda
+    - Modo debug ............................. CFG.debug
+    - Fade do dado descartado ................ CFG.descartado
+    - Física do arremesso .................... CFG.fisica
+
+    Obs: os números de linha mudam se você editar o arquivo. Se algo
+    não bater, procura pela palavra-chave mesmo — é mais confiável.
+    ============================================================================
+    -->
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        :root {
+            /* GUIA RÁPIDO — Cores do overlay
+               --cor-normal → rolagens comuns
+               --cor-crit   → crítico (01)
+               --cor-falha  → desastre
+               --cor-fundo  → fundo da caixinha da legenda; o último
+                              número do rgba é a transparência
+                              (1 = sólido, 0 = invisível)
+
+               Pra trocar: pesquisa "seletor de cores" no Google,
+               escolhe, copia o código com "#" e cola aqui por cima. */
+            --cor-normal: #ffb648;
+            --cor-crit: #2ee673;
+            --cor-falha: #ff4d5e;
+            --cor-texto-mudo: #a0a0a5;
+            --cor-fundo: rgba(20, 20, 22, 0.92);
+
+            /* Padrão do fade do dado descartado (bônus/penalidade que
+               não foi usado). O JS sobrescreve com CFG.descartado, mas
+               deixei aqui também pra caso o JS não rode. */
+            --fade-desc-delay: 1500ms;
+            --fade-desc-dur: 2000ms;
+            --fade-desc-ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #palco {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .grupo {
+            --cor-evento: var(--cor-normal);
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.5s ease;
+        }
+        .grupo.crit { --cor-evento: var(--cor-crit); }
+        .grupo.fail { --cor-evento: var(--cor-falha); }
+        .grupo.saindo { opacity: 0; }
+
+        .dados {
+            position: relative;
+            width: 0;
+            height: var(--tam);
+        }
+
+        .dados canvas {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: var(--tam);
+            height: var(--tam);
+            margin: calc(var(--tam) / -2) 0 0 calc(var(--tam) / -2);
+            opacity: 0;
+            filter: hue-rotate(var(--matiz, 0deg));
+            transition: opacity 0.35s ease, filter 0.4s ease;
+            will-change: transform, opacity;
+        }
+        .dados canvas.unidade { --matiz: var(--matiz-unidade, 0deg); }
+        .grupo.pronto.crit canvas:not(.descartado) {
+            filter: hue-rotate(var(--matiz, 0deg)) drop-shadow(0 0 12px var(--cor-crit));
+        }
+        .grupo.pronto.fail canvas:not(.descartado) {
+            filter: hue-rotate(var(--matiz, 0deg)) drop-shadow(0 0 12px var(--cor-falha));
+        }
+
+        /* Dado descartado (aquele que saiu em vantagem/desvantagem
+           mas não foi o escolhido): em vez de só escurecer e ficar
+           "meio apagado" esperando o resto, ele some de vez com um
+           fade lento. Assim ninguém fica dessincronizado. */
+        .dados canvas.descartado {
+            opacity: 0 !important;
+            transition-property: opacity;
+            transition-duration: var(--fade-desc-dur, 2000ms);
+            transition-timing-function: var(--fade-desc-ease, cubic-bezier(0.4, 0, 0.2, 1));
+            transition-delay: var(--fade-desc-delay, 1500ms);
+        }
+
+        .legenda {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-top: calc(var(--tam) * -0.2);
+            padding: 3px 12px;
+            font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+            background-color: var(--cor-fundo);
+            border-left: 3px solid var(--cor-evento);
+            border-radius: 5px;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+            opacity: 0;
+            transition: opacity 0.35s;
+        }
+        .grupo.pronto .legenda { opacity: 1; }
+        .legenda .quem {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--cor-texto-mudo);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .legenda .valor {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--cor-evento);
+            line-height: 1;
+        }
+
+        /* Pra quem usa "reduzir movimento" no sistema: tudo vira fade
+           curto e simples. Nada de bezier longo nem fade com delay. */
+        @media (prefers-reduced-motion: reduce) {
+            .grupo { transition: opacity 0.5s !important; }
+            .dados canvas { transition: opacity 0.35s, filter 0.4s !important; }
+            .dados canvas.descartado {
+                transition-property: opacity !important;
+                transition-duration: 0.35s !important;
+                transition-timing-function: ease !important;
+                transition-delay: var(--fade-desc-delay, 1500ms) !important;
+            }
+            .legenda { transition: opacity 0.35s !important; }
+        }
+
+        #debug, #status {
+            display: none;
+            position: fixed;
+            left: 6px;
+            top: 6px;
+            max-width: 60%;
+            padding: 4px 8px;
+            font: 12px monospace;
+            color: #fff;
+            background: #000a;
+            white-space: pre-wrap;
+            z-index: 99;
+        }
+        #status { top: auto; bottom: 6px; }
+    </style>
+</head>
+<body>
+
+    <div id="palco"></div>
+    <div id="debug"></div>
+    <div id="status"></div>
+
+    <script src="dado3d.js"></script>
+    <script>
+        /* ============================================================
+           CONFIG — o grosso do que dá pra mexer fica aqui embaixo.
+           Cada bloco tem um "GUIA RÁPIDO" explicando. Não precisa
+           saber programar: troca os números/true-false e salva.
+           ============================================================ */
+        const CFG = {
+
+            /* GUIA RÁPIDO — Endereço do bot (WebSocket)
+               Deixando url: null, o overlay faz o seguinte sozinho:
+                 1) tenta conectar no bot LOCAL (urlLocal);
+                 2) se não achar nada rodando no seu PC em timeoutConexao ms,
+                    cai pra NUVEM (urlNuvem).
+               Ou seja: rodando local, ele acha local; rodando só na
+               nuvem, ele acha a nuvem. Sem mexer em nada.
+
+               Se quiser forçar um endereço só (por exemplo, sempre
+               nuvem), preenche url: 'wss://seu-app.onrender.com'
+               e o fallback automático é desligado.
+
+               Repara que local é "ws://" e nuvem é "wss://" (com "s").
+               Errar isso é o motivo nº 1 de "o overlay não mostra nada". */
+            url: null,
+            urlLocal: 'ws://localhost:8080',
+            urlNuvem: 'wss://coc-bot-nj44.onrender.com',
+            timeoutConexao: 1500, // ms que ele espera cada endereço antes de desistir
+
+            /* GUIA RÁPIDO — Tamanho dos dados
+               Tamanho em pixels do canvas de cada dado. Pra deixar tudo
+               maior na tela, o ideal é aumentar Largura/Altura nas
+               propriedades da fonte de navegador no OBS — o overlay
+               se adapta sozinho, sem editar aqui. */
+            tamanho: 150,
+
+            /* GUIA RÁPIDO — Onde os dados aparecem na tela
+               A zona é em % do tamanho do navegador. zonaMinX = 25
+               significa que o dado nunca aparece antes de 25% da
+               largura. Diminuir o intervalo = resultados mais centrados.
+               Aumentar = mais espalhados pela tela. */
+            zonaMinX: 25,
+            zonaMaxX: 75,
+            zonaMinY: 28,
+            zonaMaxY: 72,
+
+            /* GUIA RÁPIDO — Quanto tempo ficam na tela (em ms)
+               4000 = 4 segundos, contados de quando param de rolar. */
+            vida: 4000,
+
+            /* GUIA RÁPIDO — Quantos resultados ao mesmo tempo
+               Se chegar mais gente rolando junto, o mais antigo sai
+               de cena pra dar lugar pro novo. */
+            maxGrupos: 4,
+
+            /* Máximo de dados por rolagem (1 dezena + 1 unidade +
+               eventuais dados de vantagem/desvantagem). Não precisa
+               mexer aqui — é só uma trava de segurança. */
+            maxDados: 6,
+
+            /* Matiz aplicado ao dado de unidade pra ele ficar de cor
+               diferente da dezena (0 = mesma cor, 200 = azulado). */
+            matizUnidade: 200,
+
+            /* GUIA RÁPIDO — Mostrar legenda (nome + valor)
+               true = aparece um cartãozinho embaixo dos dados com o
+               nome do personagem e o total final.
+               false = só os dados, sem nada embaixo. */
+            legenda: false,
+
+            /* GUIA RÁPIDO — Modo debug
+               true = mostra um painel no canto com o JSON cru que o
+               bot mandou. Ajuda muito quando nada aparece na tela. */
+            debug: false,
+
+            /* GUIA RÁPIDO — Fade do dado descartado (bônus/penalidade)
+               Quando uma rolagem tem vantagem/desvantagem, os dados
+               extras que não foram usados ficam visíveis por um tempo
+               e depois somem devagar. Aqui você controla:
+                 delay   → quanto tempo (ms) ele fica visível antes
+                           de começar a desaparecer;
+                 duracao → quanto tempo (ms) leva pra sumir;
+                 easing  → a "curva" do fade. cubic-bezier é a mais
+                           suave; se quiser mais simples, usa 'ease'
+                           ou 'linear'. */
+            descartado: {
+                delay: 1500,
+                duracao: 2000,
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
+            },
+
+            /* GUIA RÁPIDO — Física do arremesso
+               Aqui é onde você ajusta "a sensação" dos dados caindo.
+               Não tem certo nem errado: é questão de gosto. Mexe um
+               parâmetro, salva, vê como fica, e vai afinando.
+
+               Os mais divertidos de mexer:
+                 atritoMesa    → menor = desliza mais (mais "gelo");
+                                 maior = para mais rápido (mais "mesa").
+                 atritoLinear  → o que faz o dado parar DE VERDADE.
+                                 Sem ele, o dado desliza eternamente.
+                 gravidade     → quanto o dado "cai". Maior = arco
+                                 mais curto e pesado.
+                 alturaInicial → a altura de onde o dado é jogado.
+                 restituicaoXY → o "quique" quando bate em outro dado.
+                                 0 = sem quique, 1 = pula como borracha. */
+            fisica: {
+                // Geometria do arremesso
+                distanciaMin: 320,
+                distanciaMax: 520,
+                anguloJitter: 0.9,
+                distJitter: 0.25,
+
+                // Velocidade inicial no plano XY
+                fatorVelocidade: 700,
+                jitterVelocidade: 0.18,
+
+                // Altura (Z) — o arco do arremesso
+                alturaInicial: 60,
+                velZInicial: 0.20,
+                gravidade: 0.0012,
+
+                // Atrito exponencial (arrasto) — estabilizado por dt real
+                atritoAr: 0.9995,
+                atritoMesa: 0.988,
+
+                // Atrito linear (rolamento) — é o que mata o deslizar
+                // eterno, porque ele consegue frear até parar de vez.
+                atritoLinear: 0.00035,
+
+                // Elasticidade
+                restituicaoZ: 0.45,
+                restituicaoXY: 0.55,
+                restituicaoParede: 0.45, // quique contra as bordas do OBS
+
+                // Raio de colisão (fração do tamanho do canvas)
+                raio: 0.40,
+
+                // Critério de "parado"
+                velocidadeMin: 0.015,
+                framesParaDormir: 14,
+
+                // Perspectiva visual
+                escalaPorZ: 0.005,
+
+                // Stagger entre dados (ms) — o dado 2 sai um tiquinho
+                // depois do 1, e assim por diante. Fica mais natural.
+                stagger: 50,
+
+                // Trava de segurança: se a física entrar em loop (não
+                // devia, mas por via das dúvidas), para tudo aqui.
+                timeoutMs: 4500,
+
+                // Colisão só entre dados com |z| abaixo disto (evita
+                // dois dados se baterem quando estão longe do chão)
+                alturaColisao: 14
+            }
+        };
+        /* ============================================================ */
+
+        document.documentElement.style.setProperty('--tam', CFG.tamanho + 'px');
+        document.documentElement.style.setProperty('--matiz-unidade', CFG.matizUnidade + 'deg');
+        document.documentElement.style.setProperty('--fade-desc-delay', CFG.descartado.delay + 'ms');
+        document.documentElement.style.setProperty('--fade-desc-dur', CFG.descartado.duracao + 'ms');
+        document.documentElement.style.setProperty('--fade-desc-ease', CFG.descartado.easing);
+
+        const palco = document.getElementById('palco');
+        const debugEl = document.getElementById('debug');
+        const statusEl = document.getElementById('status');
+
+        let statusTimer;
+
+        // Aviso no canto da tela (aparece só quando tem algo pra dizer
+        // e some sozinho depois de 8s — a não ser que seja fixo).
+        function status(texto, fixo) {
+            statusEl.textContent = 'Dados 3D: ' + texto;
+            statusEl.style.display = 'block';
+            clearTimeout(statusTimer);
+            if (!fixo && !CFG.debug) statusTimer = setTimeout(() => { statusEl.style.display = 'none'; }, 8000);
+        }
+
+        function rand(min, max) { return min + Math.random() * (max - min); }
+        function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+        function valorValido(n) {
+            return Number.isInteger(n) && n >= 1 && n <= 100;
+        }
+
+        function partesD100(valor) {
+            return valor === 100 ? { dezena: 0, unidade: 0 } : { dezena: Math.floor(valor / 10), unidade: valor % 10 };
+        }
+
+        function lerVantagem(texto) {
+            if (!texto) return null;
+            const t = String(texto);
+            const tipo = /b[oô]nus|vantagem/i.test(t) ? 'bonus' : (/penalidade|desvantagem/i.test(t) ? 'penalidade' : null);
+            if (!tipo) return null;
+            const n = t.match(/\d+/);
+            return { tipo, qtd: Math.min(2, Math.max(1, n ? +n[0] : 1)) };
+        }
+
+        // Monta a lista de dados que vão aparecer na tela pro caso de
+        // rolagem de d100 "crua" (formato que o bot manda com tipo=comando).
+        function dadosDoComando(valor, vantagem) {
+            const { dezena, unidade } = partesD100(valor);
+            const lista = [{ alvo: dezena, ehDezena: true, descartado: false }];
+
+            const vant = lerVantagem(vantagem);
+            if (vant) {
+                for (let i = 0; i < vant.qtd; i++) {
+                    const extra = vant.tipo === 'bonus' ? randInt(dezena, 9) : randInt(0, dezena);
+                    lista.push({ alvo: extra, ehDezena: true, descartado: true });
+                }
+            }
+            lista.push({ alvo: unidade, ehDezena: false, descartado: false });
+            return lista;
+        }
+
+        function aplicarModificador(vals, mod) {
+            if (!mod || vals.some((x) => x.descartado)) return;
+            const m = mod.toLowerCase().match(/^(k|d)([hl])(\d*)$/);
+            if (!m) return;
+            const n = m[3] ? +m[3] : 1;
+            const ordem = vals.map((_, i) => i).sort((a, b) => vals[a].v - vals[b].v);
+            const extremo = m[2] === 'h' ? ordem.slice(-n) : ordem.slice(0, n);
+            const manter = new Set(m[1] === 'k' ? extremo : ordem.filter((i) => !extremo.includes(i)));
+            vals.forEach((x, i) => { x.descartado = !manter.has(i); });
+        }
+
+        function lerGrupos(texto) {
+            const grupos = [];
+            const re = /\[([^\]]*)\]\s*\d*d(\d+|%)(k[hl]\d*|d[hl]\d*)?/gi;
+            let m;
+            while ((m = re.exec(texto))) {
+                const faces = m[2] === '%' ? 100 : +m[2];
+                const vals = m[1].split(',').map((tok) => {
+                    const num = tok.match(/\d+/);
+                    return num ? { v: +num[0], descartado: /~/.test(tok) } : null;
+                }).filter(Boolean).filter((x) => x.v >= 1 && x.v <= faces);
+                aplicarModificador(vals, m[3]);
+                grupos.push({ vals, faces, ini: m.index, fim: re.lastIndex });
+            }
+            return grupos;
+        }
+
+        function lerResultadoFinal(texto) {
+            const partes = texto.split(/⟵|←|<-|⟸/);
+            const alvo = partes.length >= 3 ? partes[1] : partes[0];
+            const n = alvo.replace(/[*_`~]/g, '').match(/\d+/);
+            return n ? +n[0] : null;
+        }
+
+        // Lê um texto de rolagem vindo do Rollem e devolve os dados
+        // individuais que o overlay tem que animar. Tenta primeiro o
+        // formato antigo (d10 de dezena × 10 + d10 de unidade), depois
+        // o formato direto (1d100 que já dá o valor final).
+        function interpretarRollem(dados) {
+            const texto = String(dados.resultado || '')
+                .replace(/\\([*_~`])/g, '$1')
+                .replace(/\*\*|[_`]/g, '');
+            const grupos = lerGrupos(texto);
+            if (!grupos.length) return null;
+
+            let lista = [];
+            let soma = 0;
+
+            const idxDezenas = grupos.findIndex((g, i) =>
+                g.faces === 10 &&
+                /^\s*[-−]\s*1\s*\)\s*[*×x]\s*10/i.test(texto.slice(g.fim)) &&
+                grupos.slice(i + 1).some((h) => h.faces === 10));
+
+            if (idxDezenas >= 0) {
+                const gDez = grupos[idxDezenas];
+                const gUni = grupos.slice(idxDezenas + 1).find((h) => h.faces === 10);
+                gDez.vals.forEach((x) => lista.push({ alvo: x.v - 1, ehDezena: true, descartado: x.descartado }));
+                gUni.vals.filter((x) => !x.descartado).forEach((x) => lista.push({ alvo: x.v % 10, ehDezena: false, descartado: false }));
+            } else {
+                for (const g of grupos) {
+                    if (g.faces === 100) {
+                        g.vals.filter((x) => !x.descartado).slice(0, 2).forEach((x) => {
+                            const { dezena, unidade } = partesD100(x.v);
+                            lista.push({ alvo: dezena, ehDezena: true, descartado: false });
+                            lista.push({ alvo: unidade, ehDezena: false, descartado: false });
+                            soma += x.v;
+                        });
+                    } else if (g.faces === 10) {
+                        g.vals.forEach((x) => {
+                            lista.push({ alvo: x.v % 10, ehDezena: false, descartado: x.descartado });
+                            if (!x.descartado) soma += x.v;
+                        });
+                    }
+                }
+            }
+
+            if (!lista.length) return null;
+            lista = lista.slice(0, CFG.maxDados);
+
+            const valor = lerResultadoFinal(texto);
+            return { valor: valor != null ? valor : soma, jogador: dados.jogador || '', evento: dados.evento, dados: lista };
+        }
+
+        function interpretar(dados) {
+            if (dados.tipo === 'comando') {
+                const valor = parseInt(dados.valor, 10);
+                if (!valorValido(valor)) return null;
+                return { valor, jogador: dados.jogador || '', evento: dados.evento, dados: dadosDoComando(valor, dados.vantagem) };
+            }
+            return interpretarRollem(dados);
+        }
+
+        function removerGrupo(grupo) {
+            if (!grupo.isConnected) return;
+            grupo.classList.add('saindo');
+            setTimeout(() => grupo.remove(), 500);
+        }
+
+        /**
+         * Simulador do arremesso: gravidade no eixo Z, colisão entre
+         * dados no plano XY, e contenção nas bordas visíveis da tela.
+         *
+         * "limites" chega já em espaço local do canvas — o mesmo espaço
+         * do transform. Em outras palavras: x ∈ [esq, dir] é o que faz
+         * sentido como posição do dado dentro do palco, e essas bordas
+         * são calculadas em lancarRolagem com base no tamanho real da
+         * fonte de navegador do OBS. Assim funciona tanto em FHD quanto
+         * em 4K, tanto com legenda quanto sem, sem precisar de ajuste.
+         */
+        function simularArremesso(dados, anguloBase, limites) {
+            const F = CFG.fisica;
+            const raio = CFG.tamanho * F.raio;
+
+            const corpos = dados.map((d) => {
+                const ang = anguloBase + rand(-F.anguloJitter, F.anguloJitter);
+                const dist = rand(F.distanciaMin, F.distanciaMax);
+                const px = Math.cos(ang) * dist;
+                const py = Math.sin(ang) * dist;
+
+                const vel = (dist / F.fatorVelocidade) * rand(1 - F.jitterVelocidade, 1 + F.jitterVelocidade);
+                const dir = ang + Math.PI + rand(-F.distJitter, F.distJitter);
+                const vx = Math.cos(dir) * vel;
+                const vy = Math.sin(dir) * vel;
+
+                return {
+                    canvas: d.canvas,
+                    x: px, y: py, z: F.alturaInicial,
+                    vx, vy,
+                    vz: F.velZInicial * rand(0.8, 1.2),
+                    r: raio,
+                    paradoDesde: null,
+                    dentro: false // vira true quando o centro do dado entra na área visível
+                };
+            });
+
+            corpos.forEach((c) => { c.canvas.style.opacity = '1'; });
+
+            return new Promise((resolve) => {
+                const t0 = performance.now();
+                let tAnt = t0;
+                let framesQuietos = 0;
+                const inicioEscalonado = corpos.map(() => performance.now() + Math.random() * F.stagger);
+
+                function frame(agora) {
+                    const dt = Math.min(32, agora - tAnt);
+                    tAnt = agora;
+                    const dtFrames = dt / 16;
+
+                    // ---------- Integração ----------
+                    for (let i = 0; i < corpos.length; i++) {
+                        const c = corpos[i];
+
+                        if (agora < inicioEscalonado[i]) {
+                            c.canvas.style.transform =
+                                `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0) scale(${(1 + c.z * F.escalaPorZ).toFixed(3)})`;
+                            continue;
+                        }
+
+                        c.vz -= F.gravidade * dt;
+
+                        const naMesa = c.z <= 0.5;
+                        const damping = naMesa ? F.atritoMesa : F.atritoAr;
+                        const fatorExp = Math.pow(damping, dtFrames);
+                        c.vx *= fatorExp;
+                        c.vy *= fatorExp;
+
+                        // Atrito linear (rolamento) — é ele que faz o dado
+                        // parar de vez em vez de deslizar pra sempre.
+                        const velXY = Math.hypot(c.vx, c.vy);
+                        if (velXY > 0) {
+                            const alvo = Math.max(0, velXY - F.atritoLinear * dt);
+                            const escala = alvo / velXY;
+                            c.vx *= escala;
+                            c.vy *= escala;
+                        }
+
+                        c.x += c.vx * dt;
+                        c.y += c.vy * dt;
+                        c.z += c.vz * dt;
+
+                        // Chão
+                        if (c.z <= 0) {
+                            c.z = 0;
+                            if (c.vz < -0.05) c.vz = -c.vz * F.restituicaoZ;
+                            else c.vz = 0;
+                        }
+
+                        // ---------- Paredes (bordas da tela do OBS) ----------
+                        // Só "arma" depois que o dado entrou em campo —
+                        // antes disso ele ainda está voando pra dentro, não
+                        // faz sentido ele quicar na borda de onde veio.
+                        if (!c.dentro) {
+                            if (c.x >= limites.esq && c.x <= limites.dir &&
+                                c.y >= limites.topo && c.y <= limites.base) {
+                                c.dentro = true;
+                            }
+                        } else {
+                            if (c.x < limites.esq) {
+                                c.x = limites.esq;
+                                if (c.vx < 0) c.vx = -c.vx * F.restituicaoParede;
+                            } else if (c.x > limites.dir) {
+                                c.x = limites.dir;
+                                if (c.vx > 0) c.vx = -c.vx * F.restituicaoParede;
+                            }
+                            if (c.y < limites.topo) {
+                                c.y = limites.topo;
+                                if (c.vy < 0) c.vy = -c.vy * F.restituicaoParede;
+                            } else if (c.y > limites.base) {
+                                c.y = limites.base;
+                                if (c.vy > 0) c.vy = -c.vy * F.restituicaoParede;
+                            }
+                        }
+                    }
+
+                    // ---------- Colisão entre dados (só perto do chão) ----------
+                    for (let i = 0; i < corpos.length; i++) {
+                        const a = corpos[i];
+                        if (agora < inicioEscalonado[i]) continue;
+                        for (let j = i + 1; j < corpos.length; j++) {
+                            const b = corpos[j];
+                            if (agora < inicioEscalonado[j]) continue;
+                            if (a.z > F.alturaColisao || b.z > F.alturaColisao) continue;
+
+                            const dx = b.x - a.x;
+                            const dy = b.y - a.y;
+                            const dist = Math.hypot(dx, dy);
+                            const minD = a.r + b.r;
+                            if (dist >= minD || dist === 0) continue;
+
+                            const nx = dx / dist, ny = dy / dist;
+                            const sobra = (minD - dist) * 0.5;
+                            a.x -= nx * sobra; a.y -= ny * sobra;
+                            b.x += nx * sobra; b.y += ny * sobra;
+
+                            const va = a.vx * nx + a.vy * ny;
+                            const vb = b.vx * nx + b.vy * ny;
+                            const relV = va - vb;
+                            if (relV > 0) {
+                                const impulso = relV * (1 + F.restituicaoXY) * 0.5;
+                                a.vx -= nx * impulso; a.vy -= ny * impulso;
+                                b.vx += nx * impulso; b.vy += ny * impulso;
+                                a.paradoDesde = null;
+                                b.paradoDesde = null;
+                            }
+                        }
+                    }
+
+                    // ---------- Aplica no DOM e checa se parou ----------
+                    let todosQuietos = true;
+                    for (let i = 0; i < corpos.length; i++) {
+                        const c = corpos[i];
+
+                        if (agora >= inicioEscalonado[i]) {
+                            const velXY = Math.hypot(c.vx, c.vy);
+                            const moveu = velXY > F.velocidadeMin || Math.abs(c.vz) > F.velocidadeMin;
+                            if (moveu) {
+                                c.paradoDesde = null;
+                                todosQuietos = false;
+                            } else if (c.paradoDesde == null) {
+                                c.paradoDesde = agora;
+                            }
+                        }
+
+                        const escala = 1 + c.z * F.escalaPorZ;
+                        c.canvas.style.transform =
+                            `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0) scale(${escala.toFixed(3)})`;
+                    }
+
+                    if (todosQuietos) framesQuietos++;
+                    else framesQuietos = 0;
+
+                    const timeout = agora - t0 > F.timeoutMs;
+                    const pronto = framesQuietos >= F.framesParaDormir;
+
+                    if (!pronto && !timeout) {
+                        requestAnimationFrame(frame);
+                    } else {
+                        resolve();
+                    }
+                }
+
+                requestAnimationFrame(frame);
+            });
+        }
+
+        function lancarRolagem(info) {
+            const grupo = document.createElement('div');
+            grupo.className = 'grupo' + (info.evento === 'crit' ? ' crit' : info.evento === 'fail' ? ' fail' : '');
+
+            const destX = rand(CFG.zonaMinX, CFG.zonaMaxX);
+            const destY = rand(CFG.zonaMinY, CFG.zonaMaxY);
+            grupo.style.left = destX.toFixed(2) + '%';
+            grupo.style.top = destY.toFixed(2) + '%';
+
+            // O arremesso vem de fora da tela, do lado oposto ao destino,
+            // pra dar aquela impressão de "jogado".
+            const origemX = destX > 50 ? rand(-20, 20) : rand(80, 120);
+            const origemY = destY > 50 ? rand(-20, 30) : rand(70, 120);
+            const anguloArremesso = Math.atan2(origemY - destY, origemX - destX);
+
+            const linha = document.createElement('div');
+            linha.className = 'dados';
+            grupo.appendChild(linha);
+
+            const dados = info.dados.map((d) => {
+                const canvas = document.createElement('canvas');
+                if (!d.ehDezena) canvas.classList.add('unidade');
+                linha.appendChild(canvas);
+                return { ...d, canvas };
+            });
+
+            if (CFG.legenda) {
+                const leg = document.createElement('div');
+                leg.className = 'legenda';
+                if (info.jogador) {
+                    const quem = document.createElement('span');
+                    quem.className = 'quem';
+                    quem.textContent = info.jogador;
+                    leg.appendChild(quem);
+                }
+                const valor = document.createElement('span');
+                valor.className = 'valor';
+                valor.textContent = info.valor;
+                leg.appendChild(valor);
+                grupo.appendChild(leg);
+            }
+
+            // Se já tem o máximo de grupos na tela, tira o mais antigo
+            // pra abrir espaço pro novo (mesma lógica do overlayOBS).
+            const ativos = [...palco.querySelectorAll('.grupo:not(.saindo)')];
+            while (ativos.length >= CFG.maxGrupos) removerGrupo(ativos.shift());
+
+            palco.appendChild(grupo);
+
+            // ---------- Limites da tela (bordas do OBS) ----------
+            // Mede o centro real de .dados no viewport depois de anexado.
+            // .dados tem width:0, então o próprio left já é o centro X; a
+            // altura é CFG.tamanho, então o centro Y é top + tam/2. Assim
+            // funciona com ou sem legenda, e respeita o tamanho da
+            // fonte de navegador que o OBS estiver usando (FHD, 4K, etc.).
+            const rDados = linha.getBoundingClientRect();
+            const centroX = rDados.left + rDados.width / 2;
+            const centroY = rDados.top + rDados.height / 2;
+            const metade = CFG.tamanho / 2;
+            const limites = {
+                esq:  -centroX + metade,
+                dir:  window.innerWidth  - centroX - metade,
+                topo: -centroY + metade,
+                base: window.innerHeight - centroY - metade
+            };
+
+            // Rotação 3D por dado, em paralelo com a física do grupo.
+            const promessasGiro = dados.map((d) => {
+                const dado3d = criarDado3D(d.canvas, { multiplicador: d.ehDezena ? 10 : 1 });
+                return dado3d.rolarPara(d.alvo);
+            });
+
+            const promessaFisica = simularArremesso(dados, anguloArremesso, limites);
+
+            Promise.all([...promessasGiro, promessaFisica]).then(() => {
+                // O dado descartado ganha a classe .descartado, cujo fade
+                // (delay + duração + bezier) está definido no CSS, usando
+                // CFG.descartado. Não mexemos em opacity aqui — o CSS
+                // cuida do timing pra não ficar dessincronizado.
+                dados.forEach((d) => { if (d.descartado) d.canvas.classList.add('descartado'); });
+                grupo.classList.add('pronto');
+                setTimeout(() => removerGrupo(grupo), CFG.vida);
+            });
+        }
+
+        function mostrarDebug(dados) {
+            if (!CFG.debug) return;
+            console.log('[overlay dados] payload:', dados);
+            debugEl.style.display = 'block';
+            debugEl.textContent = JSON.stringify(dados, null, 1).slice(0, 600);
+        }
+
+        // ============================================================
+        // CONEXÃO COM O BOT
+        // ------------------------------------------------------------
+        // Se CFG.url estiver preenchido, usa só ele (sem fallback).
+        // Se estiver null, tenta local primeiro, cai pra nuvem depois.
+        // Assim funciona tanto pra quem roda o bot no PC quanto pra quem
+        // roda só na Render — sem precisar editar o arquivo.
+        // ============================================================
+
+        // Tenta abrir um WebSocket e devolve uma Promise que resolve com
+        // o socket já aberto, ou rejeita se estourar o timeout / der erro.
+        function tentarConexao(url, timeoutMs) {
+            return new Promise((resolve, reject) => {
+                let decidido = false;
+                let ws;
+                try {
+                    ws = new WebSocket(url);
+                } catch (e) {
+                    return reject(e);
+                }
+                const timer = setTimeout(() => {
+                    if (decidido) return;
+                    decidido = true;
+                    try { ws.close(); } catch (e) {}
+                    reject(new Error('timeout'));
+                }, timeoutMs);
+
+                ws.onopen = () => {
+                    if (decidido) return;
+                    decidido = true;
+                    clearTimeout(timer);
+                    resolve(ws);
+                };
+                ws.onerror = () => {
+                    if (decidido) return;
+                    decidido = true;
+                    clearTimeout(timer);
+                    reject(new Error('erro'));
+                };
+            });
+        }
+
+        function aplicarMensagem(event) {
+            let dados;
+            try { dados = JSON.parse(event.data); } catch (e) { return; }
+            mostrarDebug(dados);
+
+            // O bot manda o histórico logo que a gente conecta. Não é uma
+            // rolagem nova, então só ignora.
+            if (dados.tipo === 'historico') return;
+
+            const info = interpretar(dados);
+            if (!info) {
+                console.warn('[overlay dados] nada para animar em:', dados);
+                status('mensagem recebida, mas sem d100/d10 reconhecível (use debug: true para ver o conteúdo)');
+                return;
+            }
+            try { lancarRolagem(info); }
+            catch (e) { console.error(e); status('erro ao animar: ' + e.message, true); }
+        }
+
+        // Fica responsável por reconectar quando a conexão cai. Se o
+        // endereço atual morreu, tenta ele mesmo primeiro (caso tenha
+        // sido só uma oscilação) e depois cai pro fluxo completo.
+        function aoFechar(url) {
+            status(`desconectado de ${url} — tentando reconectar…`, true);
+            setTimeout(conectar, 2000);
+        }
+
+        async function conectar() {
+            // Se o usuário fixou uma URL, respeita isso e pronto.
+            if (CFG.url) {
+                status(`conectando em ${CFG.url}…`);
+                try {
+                    const ws = await tentarConexao(CFG.url, CFG.timeoutConexao);
+                    ws.onmessage = aplicarMensagem;
+                    ws.onclose = () => aoFechar(CFG.url);
+                    status('conectado ao bot');
+                } catch (e) {
+                    aoFechar(CFG.url);
+                }
+                return;
+            }
+
+            // Modo automático: local primeiro, depois nuvem.
+            status('procurando bot local…');
+            try {
+                const ws = await tentarConexao(CFG.urlLocal, CFG.timeoutConexao);
+                ws.onmessage = aplicarMensagem;
+                ws.onclose = () => aoFechar(CFG.urlLocal);
+                status('conectado ao bot local');
+                return;
+            } catch (e) {
+                // Sem bot local rodando. Vai pra nuvem.
+            }
+
+            status('tentando o bot na nuvem…');
+            try {
+                const ws = await tentarConexao(CFG.urlNuvem, CFG.timeoutConexao);
+                ws.onmessage = aplicarMensagem;
+                ws.onclose = () => aoFechar(CFG.urlNuvem);
+                status('conectado ao bot na nuvem');
+                return;
+            } catch (e) {
+                // Nem local, nem nuvem. Espera e tenta de novo.
+            }
+
+            status('não achei o bot em nenhum endereço — tentando de novo em 3s…', true);
+            setTimeout(conectar, 3000);
+        }
+
+        if (typeof criarDado3D !== 'function') {
+            status('dado3d.js NÃO carregou — ele precisa estar na mesma pasta deste arquivo', true);
+        } else {
+            conectar();
+        }
+    </script>
+</body>
+</html>
