@@ -8,7 +8,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 > ⚡ **Já sabe o que está fazendo?** Pule direto para a [versão técnica](assets/README-tecnico.md).
 
-> 🎯 **Só quer o bot de rolagens, sem exibir nada no OBS?** Você só precisa dos **Passos 1 a 7**. O [Passo 8](#passo-8--colocar-o-overlay-no-obs) e a seção de [personalização do visual/sons](#-personalizando-o-visual-e-os-sons) são só pra quem vai usar o overlay na live — pode pular direto pra [Como usar na mesa](#-como-usar-na-mesa) depois do Passo 7.
+> 🎯 **Só quer o bot de rolagens, sem exibir nada no OBS?** Você só precisa dos **Passos 1 a 7**. O [Passo 8](#passo-8--colocar-o-overlay-no-obs) e as seções de personalização ([cartões](#-personalizando-o-visual-e-os-sons) e [dados 3D](#-personalizando-os-dados-3d)) são só pra quem vai usar o overlay na live — pode pular direto pra [Como usar na mesa](#-como-usar-na-mesa) depois do Passo 7.
 
 ---
 
@@ -28,6 +28,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Passo 8 — Colocar o overlay no OBS](#passo-8--colocar-o-overlay-no-obs)
 - [Como usar na mesa](#-como-usar-na-mesa)
 - [Personalizando o visual e os sons](#-personalizando-o-visual-e-os-sons)
+- [Personalizando os dados 3D](#-personalizando-os-dados-3d)
 - [Deixando o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional)
 - [Problemas comuns](#-problemas-comuns)
 - [Créditos](#-créditos)
@@ -56,6 +57,9 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 
 ![Exemplo em um layout completo](assets/exemplo3.png)
 
+**Dados 3D (novo!):**
+Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na tela (um de dezena e um de unidade, igual a um d100 de mesa). Eles são arremessados, quicam nas bordas, batem um no outro e param no número que o bot sorteou. Em vantagem/desvantagem, os dados extras aparecem e somem devagar. Dá pra usar sozinho ou junto com os cartões — veja o [Passo 8](#passo-8--colocar-o-overlay-no-obs).
+
 ---
 ## 🔄 Como funciona
 
@@ -67,11 +71,16 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
   Bot Rollem (rolagens soltas) ─────────────────────────►  │             │
                                                            └──────┬──────┘
                                                                   │ WebSocket (porta 8080)
+                                                    ┌─────────────┴─────────────┐
+                                                    ▼                           ▼
+                                             overlayOBS.html            Dados3D.html
+                                             (cartões + som)              (dados 3D)
+                                                    └─────────────┬─────────────┘
                                                                   ▼
-                                                           overlayOBS.html  ──►  sua live no OBS
+                                                            sua live no OBS
 ```
 
-O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com o Discord e com o Google (lendo as fichas dos investigadores e também lendo/gravando os vínculos de `/registrar` na aba Registros), e transmite cada rolagem para o `overlayOBS.html`, que você adiciona no OBS como fonte de navegador. **Se o `index.js` estiver desligado, o overlay fica vazio.**
+O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com o Discord e com o Google (lendo as fichas dos investigadores e também lendo/gravando os vínculos de `/registrar` na aba Registros), e transmite cada rolagem para os overlays (`overlayOBS.html` com os cartões e/ou `Dados3D.html` com os dados 3D), que você adiciona no OBS como fontes de navegador. **Se o `index.js` estiver desligado, o overlay fica vazio.**
 
 ---
 
@@ -85,6 +94,7 @@ O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com 
 | **Regras de CoC 7e** | Crítico Absoluto (01), Sucesso Extremo (⅕), Bom (½), Normal, Falha e Desastre. |
 | **Vantagem / Desvantagem** | Rola um dado de dezena extra e usa o melhor (ou o pior) resultado. |
 | **Overlay no OBS** | Cartão animado na tela, colorido conforme o resultado. |
+| **Dados 3D no OBS** | Dois D10 (dezena + unidade) arremessados na tela, com física, quique e animação de vantagem/desvantagem. Opcional, funciona junto ou no lugar dos cartões. |
 | **Sons automáticos** | Som de dado em toda rolagem + som especial em crítico e desastre. |
 | **Suporte ao Rollem** | Rolagens feitas pelo bot Rollem também aparecem no overlay. |
 | **Histórico de rolagens** | Guarda as últimas 1000 rolagens (`/rl` e Rollem) numa aba **Rolagens** da planilha, com data, jogador, perícia, alvo e resultado. |
@@ -151,9 +161,10 @@ cd SEU-REPOSITORIO
 Ao final, sua pasta deve conter:
 
 ```
-index.js  overlayOBS.html  package.json  README.md  LICENSE
-crit.mp3  falhacrit.mp3  diceroll1.mp3  diceroll2.mp3  diceroll3.mp3
-Ficha-CoC-modelo.xlsx
+index.js  package.json  README.md  LICENSE  .gitignore
+overlay/   (os overlays do OBS e a pasta de sons)
+ficha/     (a ficha modelo em Excel)
+assets/    (imagens do README e o guia técnico)
 ```
 
 ---
@@ -222,7 +233,7 @@ Para ler a planilha e também gravar os vínculos do `/registrar` direto nela, o
 
 ## Passo 5 — Preparar a planilha das fichas
 
-> 💡 **Já tem uma ficha modelo pronta neste repositório** (`Ficha-CoC-modelo.xlsx`), criada pelo **Alan** 🏊‍♂️. Ela é **totalmente automática**: Vida, Sanidade, atributos e perícias já vêm com os cálculos prontos — é só duplicar e preencher os dados do seu investigador que o resto se ajusta sozinho. Baixe o arquivo, suba pro seu Google Drive, abra com o Google Planilhas (botão direito → *Abrir com* → *Google Planilhas*) e siga a partir do passo 5.1 abaixo para liberar o acesso.
+> 💡 **Já tem uma ficha modelo pronta neste repositório** (`ficha/Ficha_CoC_Modelo.xlsx`), criada pelo **Alan** 🏊‍♂️. Ela é **totalmente automática**: Vida, Sanidade, atributos e perícias já vêm com os cálculos prontos — é só duplicar e preencher os dados do seu investigador que o resto se ajusta sozinho. Baixe o arquivo, suba pro seu Google Drive, abra com o Google Planilhas (botão direito → *Abrir com* → *Google Planilhas*) e siga a partir do passo 5.1 abaixo para liberar o acesso.
 >
 > Em alguns casos, pode aparecer um bug visual leve nos atributos — aparece uma linha preta em algumas células por algum motivo — mas é só estético, não atrapalha os cálculos nem a leitura do bot.
 
@@ -323,7 +334,7 @@ node index.js
 Se tudo estiver certo, aparece algo como:
 
 ```
-Servidor iniciado — aguardando conexões do overlay na porta 8080.
+Servidor WebSocket iniciado — aguardando conexões do overlay na porta 8080.
 Bot conectado como SeuBot#1234!
 Planilha "Fichas CoC" carregada com sucesso!
 Registros carregados da planilha: 0 vínculo(s) de usuário → ficha.
@@ -340,46 +351,59 @@ Se você só quer usar o bot de rolagens, já está tudo pronto. Veja [Como usar
 
 ## Passo 8 — Colocar o overlay no OBS
 
-### 8.1 Apontar o overlay para o bot certo ⚠️
+### 8.1 Escolher o overlay
 
-O arquivo `overlayOBS.html` vem configurado para um servidor na nuvem. Como você está rodando o bot no seu computador, precisa mudar isso.
+O projeto vem com dois overlays. Você pode usar só um ou os dois ao mesmo tempo (cada um vira uma fonte de navegador separada no OBS):
 
-1. Abra `overlayOBS.html` no Bloco de Notas (botão direito → *Abrir com*).
-2. Perto do fim do arquivo, ache esta linha:
+| Arquivo | O que mostra | Som |
+|---|---|---|
+| `overlay/overlayOBS.html` | Cartões com jogador, perícia, alvo e resultado. Mostra também as rolagens genéricas do Rollem (`1d20`, `3d6`...). | ✅ |
+| `overlay/Dados3D.html` | Dados D10 em 3D arremessados na tela (dezena + unidade), com vantagem/desvantagem. Só anima rolagens de d100/d10. | ❌ |
 
-```javascript
-const ws = new WebSocket('wss://coc-bot-nj44.onrender.com');
-```
-Se não encontrar, copie a linha acima, vá para o Bloco de Notas, pressione (Ctrl + F) cole a linha, ou digite parte dela para localizar onde ela aparece no texto.
+> O `Dados3D.html` usa o `dado3d.js`, que fica **na mesma pasta** dele (`overlay`). E como ele não toca som, se você quiser o áudio dos dados na live, deixe também o `overlayOBS.html` ligado.
 
-3. Troque por:
+### 8.2 Conferir o endereço do bot
 
-```javascript
-const ws = new WebSocket('ws://localhost:8080');
-```
+Os dois overlays já vêm prontos pra falar com o bot rodando **no seu computador, na porta 8080** (`ws://localhost:8080`). Se você seguiu o guia até aqui, **não precisa mudar nada**: pode pular direto pro [8.3](#83-adicionar-no-obs).
 
-4. Salve.
+Só mexa nisso se você se encaixar em um destes casos. Abra o arquivo do overlay num editor de texto e use `Ctrl + F` pra achar a linha indicada.
+
+**Caso A — o bot está usando outra porta**
+
+A porta aparece na primeira linha que o bot escreve no terminal ("...aguardando conexões do overlay na porta 8080"). Se a 8080 já estava ocupada por outro programa (erro `EADDRINUSE`) e você quer usar outra, coloque uma linha `PORT=9000` no seu `.env`, reinicie o bot e troque o número nos overlays:
+
+- `overlayOBS.html` → procure `enderecoDoBot` e deixe `'ws://localhost:9000'`
+- `Dados3D.html` → procure `urlLocal` e deixe `'ws://localhost:9000'`
+
+**Caso B — o bot está na nuvem** (Render etc., veja [Deixando o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional))
+
+- `overlayOBS.html` → procure `enderecoDoBot` e troque por `'wss://seu-app.onrender.com'`
+- `Dados3D.html` → procure `urlNuvem` (vem vazio) e preencha com `'wss://seu-app.onrender.com'`. O `urlLocal` pode ficar como está: o overlay tenta o seu PC primeiro e, se não achar nada rodando, usa a nuvem.
 
 > Repare: `ws://` (local, sem "s") e `wss://` (nuvem, com "s"). Trocar isso é a causa mais comum de "o overlay não mostra nada".
 
-### 8.2 Adicionar no OBS
+### 8.3 Adicionar no OBS
 
 1. No OBS, em **Fontes**, clique em **+** → **Navegador**.
-2. Dê um nome (ex.: `Rolagens CoC`) e clique em OK.
+2. Dê um nome (ex.: `Rolagens CoC` ou `Dados 3D`) e clique em OK.
 3. Marque a caixa **Arquivo local**.
-4. Em **Arquivo local**, clique em *Procurar* e selecione o `overlayOBS.html`.
-5. Defina **Largura: 420** e **Altura: 600** (ajuste depois ao seu gosto — o layout se adapta).
-6. Marque **Desligar a fonte quando não estiver visível**: desmarcado.
-7. Marque **Controlar áudio via OBS** para que os sons dos dados entrem na transmissão.
-8. Clique em **OK** e posicione o overlay na cena.
+4. Em **Arquivo local**, clique em *Procurar* e abra a pasta `overlay` e selecione o `overlayOBS.html` (cartões) ou o `Dados3D.html` (dados 3D).
+5. Defina o tamanho:
+   - **Cartões:** Largura **420** e Altura **600** (ajuste depois ao seu gosto, o layout se adapta).
+   - **Dados 3D:** use o tamanho da cena inteira, por exemplo **1920 x 1080**. Os dados voam pela tela toda e quicam nas bordas da fonte, então uma fonte pequena deixa tudo espremido.
+6. Deixe **Desligar a fonte quando não estiver visível** desmarcado.
+7. Marque **Controlar áudio via OBS** (na fonte dos cartões) para que os sons dos dados entrem na transmissão.
+8. Clique em **OK** e posicione o overlay na cena. No caso dos dados 3D, coloque a fonte por cima do resto do layout.
 
-> Os arquivos `.mp3` precisam ficar **na mesma pasta** do `overlayOBS.html`. Não mova o HTML sozinho para outro lugar.
+> Tudo que está dentro da pasta `overlay` precisa ficar junto: os sons (pasta `sons`) ao lado do `overlayOBS.html`, e o `dado3d.js` ao lado do `Dados3D.html`. Não mova um HTML sozinho para outro lugar. Se quiser levar o overlay pra outra pasta, leve a pasta `overlay` inteira.
 
-### 8.3 Testar
+### 8.4 Testar
 
-Com o bot rodando, use `/rl` no Discord. O cartão deve surgir no OBS em menos de um segundo.
+Com o bot rodando, use `/rl` no Discord. O cartão deve surgir no OBS em menos de um segundo, e os dados 3D aparecem voando e param no número da rolagem.
 
 Se não aparecer nada: clique com o botão direito na fonte → **Interagir**, e depois **Atualizar cache da página atual**.
+
+> No canto de baixo do overlay 3D aparece um aviso pequeno ("Dados 3D: conectado ao bot...") quando ele abre ou quando algo dá errado. Ele some sozinho depois de uns segundos, e ajuda a descobrir o problema. Pra ver mais detalhes, ligue o `debug` (veja [Personalizando os dados 3D](#-personalizando-os-dados-3d)).
 
 ---
 
@@ -446,7 +470,7 @@ Mas calma, você não precisa saber programar pra fazer a maioria das alteraçõ
 
 A seguir, mostro como mexer nos parâmetros para alterar cores, quantidade de mensagens, tamanho e sons.
 
-Tudo fica no `overlayOBS.html`, no começo do arquivo. (Use Ctrl+F pra localizar facilmente):
+Os ajustes dos cartões ficam no `overlayOBS.html`, no começo do arquivo (use Ctrl+F pra localizar facilmente). Os do dado 3D ficam no `Dados3D.html`, e estão numa seção própria mais abaixo: [Personalizando os dados 3D](#-personalizando-os-dados-3d).
 
 ---
 
@@ -494,7 +518,7 @@ Pra ajustar:
 
 ### 🔊 Sons
 
-Substitua os arquivos `.mp3` mantendo exatamente os mesmos nomes:
+Substitua os arquivos `.mp3` da pasta `overlay/sons`, mantendo exatamente os mesmos nomes:
 
 - `diceroll1.mp3`, `diceroll2.mp3`, `diceroll3.mp3` — sons de rolagem comum (um é sorteado a cada vez)
 - `crit.mp3` — toca depois da rolagem, em caso de crítico
@@ -507,6 +531,48 @@ tocarSom(somRolagem, 0.8);
 ```
 
 > Troque `0.8` por um valor entre `0` e `1` pra ajustar o volume.
+
+---
+
+## 🎲 Personalizando os dados 3D
+
+Tudo isso fica no `Dados3D.html`, dentro do bloco `CFG` (logo no começo do script). O arquivo tem um **ÍNDICE** no topo, e você também pode dar `Ctrl + F` em **"GUIA RÁPIDO"** pra pular entre os pontos. Não precisa saber programar: troque os números (ou `true`/`false`), salve e atualize a fonte no OBS.
+
+| O que mudar | Procure por | Exemplo |
+|---|---|---|
+| Porta do bot | `urlLocal` | `'ws://localhost:8080'` |
+| Endereço do bot na nuvem | `urlNuvem` | `'wss://seu-app.onrender.com'` (vem vazio) |
+| Tamanho de cada dado | `tamanho` | `150` (pixels) |
+| Onde os dados caem na tela | `zonaMinX`, `zonaMaxX`, `zonaMinY`, `zonaMaxY` | `25` e `75` (% da tela) |
+| Quanto tempo ficam na tela | `vida` | `4000` (4 segundos) |
+| Quantas rolagens ao mesmo tempo | `maxGrupos` | `4` |
+| Nome + valor embaixo dos dados | `legenda` | `true` ou `false` |
+| Quanto tempo o dado descartado fica antes de sumir | `descartado` → `delay` e `duracao` | `1500` e `2000` (ms) |
+| Cores do brilho de crítico/desastre | `--cor-crit`, `--cor-falha` | `#2ee673`, `#ff4d5e` |
+| Mostrar o que o bot mandou (pra achar erro) | `debug` | `true` |
+
+> As cores funcionam igual às dos cartões: códigos hexadecimais, que você acha pesquisando "Seletor de cores" no Google.
+
+### 🎯 Física do arremesso
+
+É a "sensação" dos dados caindo, e aqui não existe certo ou errado: é gosto. Mude **um** valor por vez, salve, veja como ficou e vá afinando. Fica no bloco `fisica`. Os mais divertidos:
+
+| Valor | O que faz |
+|---|---|
+| `atritoMesa` | Menor = o dado desliza mais (tipo gelo). Maior = para mais rápido (tipo mesa). |
+| `atritoLinear` | É o que faz o dado parar **de verdade**. Sem ele, o dado desliza pra sempre. |
+| `gravidade` | Maior = arco mais curto e pesado. |
+| `alturaInicial` | A altura de onde o dado é jogado. |
+| `restituicaoXY` | O quique quando um dado bate no outro (0 = sem quique, 1 = borracha). |
+| `restituicaoParede` | O quique nas bordas da fonte do OBS. |
+
+> Se quiser deixar tudo maior, nem precisa mexer no `tamanho`: aumente a Largura/Altura da fonte de navegador no OBS que o overlay se adapta sozinho.
+
+### 🎲 Como o dado 3D funciona (curiosidade)
+
+O dado **não sorteia nada**: o número quem decide é o bot. O overlay só pega o resultado e gira o dado até a face certa (o arquivo `dado3d.js` cuida do desenho e da rotação, e o `Dados3D.html` cuida da física e da tela). Um d100 vira dois D10: um mostra a dezena (00, 10, 20... 90) e o outro a unidade (0 a 9). Nas rolagens de vantagem/desvantagem, os dados de dezena extras aparecem só pra ilustrar e somem depois.
+
+> No Rollem, só as rolagens de d100 e d10 viram dados 3D. Rolagens como `1d20` ou `3d6` aparecem nos cartões, mas o overlay 3D ignora (sem nenhum aviso na tela).
 
 ---
 
@@ -537,7 +603,7 @@ interaction.editReply(`Erro ao ler a ficha **${sheet.title}**.`);
 ### ⚠️ Mensagem de "Não registrou ficha"
 
 ```javascript
-if (!personagem) return interaction.reply({ content: 'Use `/registrar [nome]` primeiro.', ephemeral: true });
+if (!personagem) return interaction.reply({ content: 'Use `/registrar [nome]` primeiro.', flags: MessageFlags.Ephemeral });
 ```
 
 > Essa é a mensagem de aviso que aparece para quem tenta usar o comando `/rl` sem ter vinculado uma conta a uma ficha antes. É só trocar a frase entre aspas simples para algo da sua preferência (o texto é livre).
@@ -628,10 +694,14 @@ Rodando no seu PC, o bot morre junto com o computador. Para deixá-lo sempre lig
 2. No Render, crie um **Web Service** conectado a esse repositório.
 3. Em *Build Command* use `npm install` e em *Start Command* use `node index.js`.
 4. Em **Environment**, cadastre `DISCORD_TOKEN`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY` e `SPREADSHEET_ID` como variáveis (cole a `GOOGLE_PRIVATE_KEY` com os `\n` literais, igual está no `.env`).
-5. Depois do deploy, o Render te dá um endereço. No `overlayOBS.html`, use esse endereço com `wss://`:
+5. Depois do deploy, o Render te dá um endereço. Nos overlays, use esse endereço com `wss://` (é só quem hospeda na nuvem que precisa fazer isso; os detalhes estão no [Passo 8.2](#82-conferir-o-endereço-do-bot)):
 
 ```javascript
-const ws = new WebSocket('wss://seu-app.onrender.com');
+// overlayOBS.html
+const enderecoDoBot = 'wss://seu-app.onrender.com';
+
+// Dados3D.html
+urlNuvem: 'wss://seu-app.onrender.com',
 ```
 
 > Com isso está tudo pronto, porém, no plano gratuito do Render o serviço hiberna após um período sem uso e leva alguns segundos para acordar na primeira rolagem.
@@ -669,9 +739,13 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 | `Não encontrei aba contendo "..."` | Nome digitado ≠ nome da aba | Use o autocompletar do `/registrar` em vez de digitar. |
 | Jogador já registrado precisa rodar `/registrar` de novo | A aba **Registros** foi apagada/renomeada, ou a planilha perdeu a permissão de Editor para a Service Account | Confira se a aba "Registros" ainda existe e se o compartilhamento (Passo 5.1) continua como Editor. |
 | Registrou, mas nenhuma perícia aparece no `/rl` | Planilha fora do formato esperado | Revise o [Passo 5.3](#53-como-a-planilha-precisa-estar-organizada-ignorar-caso-usar-a-disponibilizada). Valores precisam ser números. |
-| Overlay em branco no OBS | Endereço do WebSocket errado, ou bot desligado | Passo 8.1 (`ws://localhost:8080`) e confira se o terminal ainda está rodando. |
+| Overlay em branco no OBS | Endereço do WebSocket errado, porta diferente, ou bot desligado | Confira o [Passo 8.2](#82-conferir-o-endereço-do-bot) (padrão: `ws://localhost:8080`) e veja se o terminal ainda está rodando. |
+| Dados 3D: aviso "o dado3d.js NÃO carregou" | O `dado3d.js` não está na mesma pasta do `Dados3D.html` (`overlay`) | Deixe os dois arquivos juntos na mesma pasta e atualize o cache da fonte no OBS. |
+| Dados 3D: aviso "não achei o bot" | Bot desligado, porta diferente da 8080 ou bot na nuvem | Confira se o bot está ligado e o [Passo 8.2](#82-conferir-o-endereço-do-bot) (`urlLocal` / `urlNuvem`). |
+| Cartões aparecem, mas os dados 3D não (ou vice-versa) | São duas fontes separadas no OBS | Confira se cada overlay foi adicionado como uma fonte de navegador própria e se está visível na cena. |
+| Dados 3D ficam espremidos, cortados ou não quicam direito | Fonte de navegador pequena demais | Aumente Largura/Altura da fonte no OBS pro tamanho da cena (ex.: 1920 x 1080). |
 | Cartões aparecem, mas sem som | Áudio não roteado | Marque *Controlar áudio via OBS* e confira em *Mixer → Propriedades Avançadas de Áudio* se o monitoramento está ativo. |
-| `EADDRINUSE: port 8080` | Já existe um bot rodando | Feche a outra janela de terminal. |
+| `EADDRINUSE: port 8080` | Já existe um bot rodando, ou outro programa está usando a porta 8080 | Feche a outra janela de terminal. Se for outro programa, mude a porta (veja o [Passo 8.2, caso A](#82-conferir-o-endereço-do-bot)). |
 | `Error: No key or keyFile set.` (bot crasha, `Exited with status 1`) | `GOOGLE_PRIVATE_KEY` ausente, vazia ou com nome errado nas Environment Variables do serviço na nuvem | Confira as variáveis do serviço certo (não um Env Group vazio) e recadastre `GOOGLE_SERVICE_ACCOUNT_EMAIL` e `GOOGLE_PRIVATE_KEY` — as duas juntas, é comum faltar uma delas. |
 | `A criação da chave da conta de serviço está desativada` / `iam.disableServiceAccountKeyCreation` no Google Cloud | Política de segurança padrão do Google bloqueando chaves de Service Account | Desative a política em **IAM e admin → Políticas da organização** (veja a mesma seção acima) e tente gerar a chave de novo. |
 | Não acho "Environment Variables" no menu do Render | Mudou de lugar/estrutura de Projects, ou não aparece no menu lateral | Acesse direto por `https://dashboard.render.com/web/SEU_SERVICE_ID/env` (o Service ID aparece no topo da página do serviço). |
@@ -684,15 +758,33 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 ## 📁 Estrutura dos arquivos
 
 ```
-├── index.js           # o bot: Discord, Google Sheets (leitura e escrita) e servidor WebSocket
-├── overlayOBS.html    # o overlay que vai no OBS (HTML, CSS e JS num arquivo só)
-├── Ficha-CoC-modelo.xlsx  # ficha modelo automática (criada por Alan) — Vida, Sanidade e perícias se calculam sozinhos
-├── package.json       # lista de dependências
-├── .env               # suas chaves secretas (você cria, nunca sobe pro GitHub)
-├── crit.mp3           # som de crítico
-├── falhacrit.mp3      # som de desastre
-└── diceroll1-3.mp3    # sons de rolagem (sorteados a cada jogada)
+├── index.js                  # o bot: Discord, Google Sheets (leitura e escrita) e servidor WebSocket
+├── package.json              # lista de dependências
+├── .env                      # suas chaves secretas (você cria, nunca sobe pro GitHub)
+├── .gitignore
+├── LICENSE
+├── README.md
+│
+├── overlay/                  # tudo que vai pro OBS fica aqui
+│   ├── overlayOBS.html       # overlay de cartões (HTML, CSS e JS num arquivo só)
+│   ├── Dados3D.html          # overlay de dados 3D (opcional)
+│   ├── dado3d.js             # desenho e rotação do D10 3D (usado pelo Dados3D.html)
+│   └── sons/
+│       ├── crit.mp3          # som de crítico
+│       ├── falhacrit.mp3     # som de desastre
+│       └── diceroll1-3.mp3   # sons de rolagem (sorteados a cada jogada)
+│
+├── ficha/
+│   └── Ficha_CoC_Modelo.xlsx # ficha modelo automática (criada por Alan): Vida, Sanidade e perícias se calculam sozinhas
+│
+└── assets/
+    ├── README-tecnico.md     # versão técnica deste guia
+    └── exemplo1-4.png        # imagens usadas neste README
 ```
+
+O `index.js` e o `package.json` ficam na raiz de propósito: é onde o `node index.js` e as hospedagens (como o Render) esperam encontrá-los.
+
+---
 
 🆘 Precisa de ajuda?
 ---
@@ -713,7 +805,7 @@ Pode perguntar sem medo, a ideia da ferramenta é justamente facilitar a vida de
 
 ## 🏊‍♂️ Créditos
 
-- **Alan** — criou a `Ficha-CoC-modelo.xlsx`, a planilha modelo de investigador usada por este projeto. Ela é totalmente automática: preenche Vida, Sanidade, atributos e perícias sozinha a partir dos dados básicos do personagem, sem precisar mexer em fórmulas.
+- **Alan** — criou a `Ficha_CoC_Modelo.xlsx`, a planilha modelo de investigador usada por este projeto. Ela é totalmente automática: preenche Vida, Sanidade, atributos e perícias sozinha a partir dos dados básicos do personagem, sem precisar mexer em fórmulas.
 
 ---
 
