@@ -376,16 +376,23 @@
         }
 
         // Monta a lista de dados da tela para as rolagens do /rl (as que
-        // chegam do bot com tipo "comando"). Os dados extras de
-        // vantagem/desvantagem são só visuais: o resultado já vem pronto.
+        // chegam do bot com tipo "comando"). O resultado já vem pronto; os
+        // dados extras de vantagem/desvantagem são só visuais, mas eu
+        // sorteio só valores que o bot poderia ter rolado de verdade:
+        // com vantagem o extra nunca dá um total menor que o escolhido, e
+        // com desvantagem nunca dá um maior. (Detalhe: dezena 0 com
+        // unidade 0 vale 100, não 0. Por isso a conta usa o total.)
         function dadosDoComando(valor, vantagem) {
             const { dezena, unidade } = partesD100(valor);
             const lista = [{ alvo: dezena, ehDezena: true, descartado: false }];
 
             const vant = lerVantagem(vantagem);
             if (vant) {
+                const totalDaDezena = (d) => (d * 10 + unidade) || 100;
+                const possiveis = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) =>
+                    vant.tipo === 'bonus' ? totalDaDezena(d) >= valor : totalDaDezena(d) <= valor);
                 for (let i = 0; i < vant.qtd; i++) {
-                    const extra = vant.tipo === 'bonus' ? randInt(dezena, 9) : randInt(0, dezena);
+                    const extra = possiveis[randInt(0, possiveis.length - 1)];
                     lista.push({ alvo: extra, ehDezena: true, descartado: true });
                 }
             }
