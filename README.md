@@ -10,6 +10,8 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 
 > 🎯 **Só quer o bot de rolagens, sem exibir nada no OBS?** Você só precisa dos **Passos 1 a 7**. O [Passo 8](#passo-8--colocar-o-overlay-no-obs) e as seções de personalização ([cartões](#-personalizando-o-visual-e-os-sons) e [dados 3D](#-personalizando-os-dados-3d)) são só pra quem vai usar o overlay na live — pode pular direto pra [Como usar na mesa](#-como-usar-na-mesa) depois do Passo 7.
 
+> 📊 **Quer mostrar Vida, Sanidade e Magia dos jogadores na tela?** Existe um terceiro arquivo, o `CthulhuStatus.html`, que **não depende do bot**: ele lê os números direto da planilha. Ensino tudo no [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
+
 ---
 
 ## 📑 Índice
@@ -26,6 +28,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Passo 6 — Criar o arquivo .env](#passo-6--criar-o-arquivo-env)
 - [Passo 7 — Instalar e ligar o bot](#passo-7--instalar-e-ligar-o-bot)
 - [Passo 8 — Colocar o overlay no OBS](#passo-8--colocar-o-overlay-no-obs)
+- [Passo 9 — HUD de Vida, Sanidade e Magia (opcional)](#passo-9--hud-de-vida-sanidade-e-magia-opcional)
 - [Como usar na mesa](#-como-usar-na-mesa)
 - [Personalizando o visual e os sons](#-personalizando-o-visual-e-os-sons)
 - [Personalizando os dados 3D](#-personalizando-os-dados-3d)
@@ -63,6 +66,10 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 
 Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na tela (um de dezena e um de unidade, igual a um d100 de mesa). Eles são arremessados, quicam nas bordas, batem um no outro e param no número que o bot sorteou. Em vantagem/desvantagem, os dados extras aparecem e somem devagar. Dá pra usar sozinho ou junto com os cartões — veja o [Passo 8](#passo-8--colocar-o-overlay-no-obs).
 
+**HUD de status (novo!):**
+
+Um terceiro overlay, o `CthulhuStatus.html`, mostra um cartão por investigador com barras de **Vida, Sanidade e Magia**. As barras se atualizam sozinhas quando você muda os números na planilha, e os cartões se dividem entre o topo e a base da tela. Ele funciona à parte do bot (não precisa do `index.js` ligado) — veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
+
 ---
 ## 🔄 Como funciona
 
@@ -85,6 +92,8 @@ Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na t
 
 O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com o Discord e com o Google (lendo as fichas dos investigadores e também lendo/gravando os vínculos de `/registrar` na aba Registros), e transmite cada rolagem para os overlays (`overlayOBS.html` com os cartões e/ou `Dados3D.html` com os dados 3D), que você adiciona no OBS como fontes de navegador. **Se o `index.js` estiver desligado, o overlay fica vazio.**
 
+> 📊 **Exceção:** o `CthulhuStatus.html` (HUD de Vida/Sanidade/Magia) **não passa pelo bot**. Ele baixa uma aba da planilha direto do Google a cada 3 segundos, então continua funcionando mesmo com o `index.js` desligado. Detalhes no [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
+
 ---
 
 ## ✨ O que o bot faz
@@ -98,6 +107,7 @@ O `index.js` fica rodando no seu computador (ou num servidor). Ele conversa com 
 | **Vantagem / Desvantagem** | Rola um dado de dezena extra e usa o melhor (ou o pior) resultado. |
 | **Overlay no OBS** | Cartão animado na tela, colorido conforme o resultado. |
 | **Dados 3D no OBS** | Dois D10 (dezena + unidade) arremessados na tela, com física, quique e animação de vantagem/desvantagem. Opcional, funciona junto ou no lugar dos cartões. |
+| **HUD de status no OBS** | Cartões com barras de Vida, Sanidade e Magia de cada investigador, lidos de uma aba da planilha. Opcional e independente do bot (veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional)). |
 | **Sons automáticos** | Som de dado em toda rolagem + som especial em crítico e desastre. |
 | **Suporte ao Rollem** | Rolagens feitas pelo bot Rollem também aparecem no overlay. |
 | **Histórico de rolagens** | Guarda as últimas 1000 rolagens (`/rl` e Rollem) numa aba **Rolagens** da planilha, com data, jogador, perícia, alvo e resultado. |
@@ -373,6 +383,8 @@ O projeto vem com dois overlays. Você pode usar só um ou os dois ao mesmo temp
 
 > O `Dados3D.html` usa o `dado3d.js`, que fica **na mesma pasta** dele (`overlay`). E como ele não toca som, se você quiser o áudio dos dados na live, deixe também o `overlayOBS.html` ligado.
 
+> 📊 Existe ainda o `CthulhuStatus.html` (HUD de Vida/Sanidade/Magia). Ele é independente do bot e tem um passo só dele: o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
+
 ### 8.2 Conferir o endereço do bot
 
 Os dois overlays já vêm prontos pra falar com o bot rodando **no seu computador, na porta 8080** (`ws://localhost:8080`). Se você seguiu o guia até aqui, **não precisa mudar nada**: pode pular direto pro [8.3](#83-adicionar-no-obs).
@@ -415,6 +427,98 @@ Com o bot rodando, use `/rl` no Discord. O cartão deve surgir no OBS em menos d
 Se não aparecer nada: clique com o botão direito na fonte → **Interagir**, e depois **Atualizar cache da página atual**.
 
 > No canto de baixo do overlay 3D aparece um aviso pequeno ("Dados 3D: conectado ao bot...") quando ele abre ou quando algo dá errado. Ele some sozinho depois de uns segundos, e ajuda a descobrir o problema. Pra ver mais detalhes, ligue o `debug` (veja [Personalizando os dados 3D](#-personalizando-os-dados-3d)).
+
+---
+
+## Passo 9 — HUD de Vida, Sanidade e Magia (opcional)
+
+O `overlay/CthulhuStatus.html` mostra na tela da live um cartão por investigador, com barras de **Vida**, **Sanidade** e **Magia** (valor atual / máximo). Assim quem assiste acompanha o estado do grupo sem você precisar narrar.
+
+> 💡 **Esse overlay é independente do bot.** Ele não conversa com o `index.js` nem com o Discord: a cada 3 segundos ele baixa uma aba da sua planilha do Google e redesenha os cartões. Ou seja, funciona **mesmo com o bot desligado**, e os números mudam direto na planilha. Dos passos anteriores, só precisa do [5.1](#51-liberar-o-acesso) e do [5.2](#52-pegar-o-id-da-planilha) (planilha compartilhada e o ID dela).
+
+### 9.1 Criar a aba do HUD
+
+Na mesma planilha das fichas, crie uma **aba nova** (botão **+** no canto inferior esquerdo) e dê um nome, por exemplo `HUD`. Monte assim, com uma linha por jogador e **as colunas exatamente nesta ordem**:
+
+| | A | B | C | D | E | F | G |
+|---|---|---|---|---|---|---|---|
+| **Linha 1** (cabeçalho) | Nome | PV atual | PV máx | SAN atual | SAN máx | PM atual | PM máx |
+| **Linha 2** | Arthur Wallace | 11 | 12 | 55 | 65 | 10 | 13 |
+| **Linha 3** | Helena Cross | 8 | 10 | 40 | 60 | 12 | 12 |
+
+> PV = pontos de vida, SAN = sanidade, PM = pontos de magia.
+
+Regras que o HUD segue:
+
+- A **linha 1 é sempre ignorada** (é o cabeçalho). O primeiro jogador precisa estar na linha 2. O que vale é a **ordem das colunas**, não o texto do cabeçalho.
+- Os valores precisam ser **números inteiros** — sem `%`, sem texto, sem vírgula decimal. Preencha também os máximos (máximo vazio ou zero é tratado como 1).
+- Linhas com o **nome vazio** são ignoradas, e linhas com menos de 7 colunas também. Não apague as colunas B a G.
+- **Evite vírgula no nome** do personagem: o HUD lê a planilha de um jeito simples e uma vírgula bagunçaria as colunas.
+- O valor pode passar do máximo (ex.: PV temporário): o número aparece normal, mas a barra trava em 100%.
+
+**Quem aparece onde:** os cartões se dividem entre a base e o topo da tela. A **primeira metade** da lista (de cima pra baixo na planilha) vai pra **base**, a segunda metade vai pro **topo**. Com um número ímpar de jogadores, a base fica com um a mais (ex.: 5 jogadores = 3 embaixo e 2 em cima).
+
+> 💡 **Dica: use fórmulas em vez de digitar.** Cada célula do HUD pode puxar o valor direto da ficha do jogador, assim o HUD acompanha a ficha sozinho quando o jogador atualiza a vida. Exemplo: `='Ficha 1 (Arthur)'!C10` — troque pelo nome da aba e pela célula onde aquele valor está na sua ficha.
+
+### 9.2 Pegar o link da aba (CSV)
+
+O HUD lê a aba pelo link de exportação em CSV, que tem este formato:
+
+```
+https://docs.google.com/spreadsheets/d/SEU_ID/export?format=csv&gid=SEU_GID
+```
+
+Você precisa de dois valores:
+
+- **`SEU_ID`**: é o mesmo ID da planilha do [Passo 5.2](#52-pegar-o-id-da-planilha) (o mesmo `SPREADSHEET_ID` do `.env`).
+- **`SEU_GID`**: é o número que identifica **aquela aba**. Clique na aba `HUD` e olhe o final da URL do navegador: `...edit#gid=SEU_GID_AQUI`. Onde aparece `SEU_GID_AQUI` acima, vai um número: esse número depois de `gid=` é o que você quer. Cada aba tem o seu, então **confira que é o da aba do HUD**, e não o da aba de uma ficha.
+
+**Teste antes de seguir:** cole o link montado numa aba anônima do navegador. Deve baixar (ou mostrar) um arquivo de texto com os dados da aba separados por vírgula. Se pedir login ou der erro, a planilha não está compartilhada como **Qualquer pessoa com o link** — volte no [Passo 5.1](#51-liberar-o-acesso).
+
+### 9.3 Colocar o link no arquivo
+
+1. Abra o `overlay/CthulhuStatus.html` no seu editor de texto (de preferência [VS Code ou Sublime](https://code.visualstudio.com/), como recomendado mais abaixo).
+2. Use `Ctrl + F` e procure por `csvUrl`. Você vai achar esta linha:
+
+```javascript
+const csvUrl = 'https://docs.google.com/spreadsheets/d/COLE_O_ID_AQUI/export?format=csv&gid=SEU_GID_AQUI';
+```
+
+3. Troque `COLE_O_ID_AQUI` pelo ID da sua planilha e `SEU_GID_AQUI` pelo `gid` da sua aba. Mantenha as aspas e o resto do link exatamente como está.
+4. Salve o arquivo (`Ctrl + S`).
+
+> ⚠️ **Cuidado ao subir pro GitHub:** como o compartilhamento da planilha é por link, quem souber o ID dela consegue abri-la. No repositório público, mantenha o `COLE_O_ID_AQUI` no lugar e só coloque o ID real na cópia que você usa no seu computador.
+
+### 9.4 Adicionar no OBS
+
+1. No OBS, em **Fontes**, clique em **+** → **Navegador** e dê um nome (ex.: `HUD Investigadores`).
+2. Marque **Arquivo local**, clique em *Procurar* e selecione o `overlay/CthulhuStatus.html`.
+3. Defina o tamanho da **cena inteira**, por exemplo **1920 x 1080**. Os cartões grudam nas bordas de cima e de baixo da fonte, então uma fonte pequena deixa tudo apertado no meio.
+4. Deixe **Desligar a fonte quando não estiver visível** desmarcado. Não precisa marcar *Controlar áudio via OBS*: o HUD não toca som.
+5. Clique em **OK** e coloque a fonte por cima do resto do layout. O fundo é transparente, então só os cartões aparecem.
+
+> O computador que roda o OBS precisa estar **com internet**: é por ela que o HUD baixa a planilha e a fonte (Cinzel/Roboto) do Google Fonts. Sem a fonte, ele usa uma fonte padrão do sistema e continua funcionando.
+
+**Testar:** mude um número na aba `HUD` (ex.: tire 2 pontos de vida de alguém). Em poucos segundos o número e a barra devem mudar no OBS. Se não aparecer nada, veja a linha do HUD na tabela de [Problemas comuns](#-problemas-comuns).
+
+### 9.5 Personalizando o HUD
+
+Tudo fica no próprio `CthulhuStatus.html`. Troque o valor, salve e atualize a fonte no OBS (*Atualizar cache da página atual*).
+
+| O que mudar | Procure por | Exemplo |
+|---|---|---|
+| Intervalo de atualização | `setInterval(fetchAndRender` | `3000` (3 segundos, em milissegundos). Não precisa ser menor que isso. |
+| Largura de cada cartão | `.player-card` → `width` | `220px` |
+| Espaço entre os cartões | `.hud-row` → `gap` | `25px` |
+| Margem em relação às bordas da tela | `.hud-row` → `padding` | `20px 40px` (vertical e horizontal) |
+| Cor da barra de Vida / Sanidade / Magia | `.fill-hp`, `.fill-san`, `.fill-mp` | `linear-gradient(90deg, #660000, #ff3333)` (cor da esquerda → cor da direita) |
+| Cor do detalhe no topo do cartão | `border-top` | `3px solid #8b0000` |
+| Textos dos rótulos | `❤️ Vida`, `🧠 Sanidade`, `✨ Magia` | Pode trocar o texto e os emojis (ex.: `🩸 Vitalidade`). |
+| Todos os cartões na base (ou todos no topo) | `const meio` | `jogadoresValidos.length` = todos embaixo · `0` = todos em cima |
+
+> As cores são códigos hexadecimais, iguais às dos cartões de rolagem: pesquise "Seletor de cores" no Google, escolha a cor e cole o código com o `#`.
+
+**Adaptando pra outro sistema:** o HUD só lê números da planilha. Pra usar outras barras (ex.: Sorte, Estresse), edite o trecho `card.innerHTML` (cada `stat-group` é uma barra) e leia mais colunas em `const pmAtual = ...`.
 
 ---
 
@@ -483,7 +587,7 @@ Mas calma, você não precisa saber programar pra fazer a maioria das alteraçõ
 
 A seguir, mostro como mexer nos parâmetros para alterar cores, quantidade de mensagens, tamanho e sons.
 
-Os ajustes dos cartões ficam no `overlayOBS.html`, no começo do arquivo (use Ctrl+F pra localizar facilmente). Os do dado 3D ficam no `Dados3D.html`, e estão numa seção própria mais abaixo: [Personalizando os dados 3D](#-personalizando-os-dados-3d).
+Os ajustes dos cartões ficam no `overlayOBS.html`, no começo do arquivo (use Ctrl+F pra localizar facilmente). Os do dado 3D ficam no `Dados3D.html`, e estão numa seção própria mais abaixo: [Personalizando os dados 3D](#-personalizando-os-dados-3d). Os do HUD de status estão no [Passo 9.5](#95-personalizando-o-hud).
 
 ---
 
@@ -763,6 +867,11 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 | `A criação da chave da conta de serviço está desativada` / `iam.disableServiceAccountKeyCreation` no Google Cloud | Política de segurança padrão do Google bloqueando chaves de Service Account | Desative a política em **IAM e admin → Políticas da organização** (veja a mesma seção acima) e tente gerar a chave de novo. |
 | Não acho "Environment Variables" no menu do Render | Mudou de lugar/estrutura de Projects, ou não aparece no menu lateral | Acesse direto por `https://dashboard.render.com/web/SEU_SERVICE_ID/env` (o Service ID aparece no topo da página do serviço). |
 | Bot para de responder do nada, mesmo sem mudar nada no código, e todos os outros bots seus no Render também caem juntos | IP de saída compartilhado do Render foi bloqueado temporariamente pelo Discord | Veja a nota em [Deixando o bot online 24 horas](#-deixando-o-bot-online-24-horas-opcional). |
+| HUD: aparece uma caixa vermelha "Erro de Conexão" no topo | O link da planilha ainda tem o `COLE_O_ID_AQUI`, o ID está errado, ou a planilha não está compartilhada como "Qualquer pessoa com o link" | Refaça o [Passo 9.3](#93-colocar-o-link-no-arquivo) e teste o link numa aba anônima ([Passo 9.2](#92-pegar-o-link-da-aba-csv)). |
+| HUD: nada aparece (sem caixa vermelha) | Planilha privada (o navegador do OBS não consegue baixar), `gid` de outra aba, ou aba sem dados | Confira o compartilhamento ([Passo 5.1](#51-liberar-o-acesso)) e se o `gid` é o da aba do HUD. Botão direito na fonte → **Interagir** → `F12` mostra o erro. |
+| HUD: jogador não aparece | Ele está na linha 1 (que é ignorada), está com o nome vazio ou com menos de 7 colunas preenchidas | Confira o [Passo 9.1](#91-criar-a-aba-do-hud): o primeiro jogador fica na linha 2, com as colunas A a G. |
+| HUD: números `0/1` ou barra vazia | Célula com texto, `%` ou vírgula decimal, ou colunas fora de ordem | Use só números inteiros e a ordem Nome, PV atual, PV máx, SAN atual, SAN máx, PM atual, PM máx. |
+| HUD: mudei a planilha e não atualizou | O Google leva alguns segundos pra refletir a edição, ou o OBS prendeu a versão antiga do arquivo | Espere uns segundos. Se persistir, botão direito na fonte → **Propriedades** → **Atualizar cache da página atual**. |
 
 **Ver o erro do overlay:** botão direito na fonte de navegador → **Interagir** → tecla `F12` abre o console com as mensagens de erro.
 
@@ -782,6 +891,7 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 │   ├── overlayOBS.html       # overlay de cartões (HTML, CSS e JS num arquivo só)
 │   ├── Dados3D.html          # overlay de dados 3D (opcional)
 │   ├── dado3d.js             # desenho e rotação do D10 3D (usado pelo Dados3D.html)
+│   ├── CthulhuStatus.html    # HUD de Vida/Sanidade/Magia (independente do bot, lê a planilha direto)
 │   └── sons/
 │       ├── crit.mp3          # som de crítico
 │       ├── falhacrit.mp3     # som de desastre
