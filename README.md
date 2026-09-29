@@ -27,7 +27,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Passo 5 — Preparar a planilha das fichas](#passo-5--preparar-a-planilha-das-fichas)
 - [Passo 6 — Criar o arquivo .env](#passo-6--criar-o-arquivo-env)
 - [Passo 7 — Instalar e ligar o bot](#passo-7--instalar-e-ligar-o-bot)
-- [Passo 8 — Colocar o overlay no OBS](#passo-8--colocar-o-overlay-no-obs)
+- [Passo 8 — Colocar o overlay no OBS (opcional)](#passo-8--colocar-o-overlay-no-obs)
 - [Passo 9 — HUD de Vida, Sanidade e Magia (opcional)](#passo-9--hud-de-vida-sanidade-e-magia-opcional)
 - [Como usar na mesa](#-como-usar-na-mesa)
 - [Personalizando o visual e os sons](#-personalizando-o-visual-e-os-sons)
@@ -68,7 +68,7 @@ Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na t
 
 **HUD de status (novo!):**
 
-Um terceiro overlay, o `CthulhuStatus.html`, mostra um cartão por investigador com barras de **Vida, Sanidade e Magia**. As barras se atualizam sozinhas quando você muda os números na planilha, e os cartões se dividem entre o topo e a base da tela. Ele funciona à parte do bot (não precisa do `index.js` ligado) — veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
+Um terceiro overlay, o `CthulhuStatus.html`, mostra um cartão por investigador com barras de **Vida, Sanidade e Magia**(Essas das imagens acima). As barras se atualizam sozinhas quando você muda os números na planilha, e os cartões se dividem entre o topo e a base da tela. Ele funciona à parte do bot (não precisa do `index.js` ligado) — veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
 
 ---
 ## 🔄 Como funciona
