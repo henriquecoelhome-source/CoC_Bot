@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>HUD Chamado de Cthulhu</title>
+    <style>
+        /* Fontes clássicas para o clima de horror cósmico */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@400;700&display=swap');
+
+        /* Alterado para flex column com space-between para separar topo e base */
+        html, body {
+            height: 100%; margin: 0; padding: 0;
+            background: transparent;
+            overflow: hidden;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+        }
+
+        /* Classe geral para as linhas do HUD */
+        .hud-row {
+            display: flex; justify-content: center; 
+            gap: 25px; width: 100%; padding: 20px 40px; box-sizing: border-box;
+        }
+
+        /* Alinhamento específico do topo e da base */
+        #hud-top { align-items: flex-start; }
+        #hud-bottom { align-items: flex-end; }
+
+        .player-card {
+            background: linear-gradient(135deg, rgba(15,15,20,0.95), rgba(30,30,40,0.9));
+            border: 1px solid rgba(100, 100, 100, 0.4);
+            border-top: 3px solid #8b0000;
+            border-radius: 8px; width: 220px; padding: 15px 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.8), inset 0 0 15px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        .player-name {
+            font-family: 'Cinzel', serif; color: #e0e0e0; font-size: 1.3em;
+            text-align: center; text-transform: uppercase; letter-spacing: 1px;
+            text-shadow: 2px 2px 4px #000; border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .stat-group { display: flex; flex-direction: column; gap: 5px; }
+
+        .stat-header {
+            display: flex; justify-content: space-between; align-items: center;
+            font-family: 'Roboto', sans-serif; font-size: 0.9em; font-weight: 700; color: #cccccc;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        .bar-bg {
+            background: rgba(0, 0, 0, 0.8); border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 4px; height: 10px; width: 100%; overflow: hidden; position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
+        }
+
+        .bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        .fill-hp { background: linear-gradient(90deg, #660000, #ff3333); box-shadow: 0 0 8px rgba(255,51,51,0.6); }
+        .fill-san { background: linear-gradient(90deg, #4b0082, #9932cc); box-shadow: 0 0 8px rgba(153,50,204,0.6); }
+        .fill-mp { background: linear-gradient(90deg, #000066, #00bfff); box-shadow: 0 0 8px rgba(0,191,255,0.6); }
+        
+        .stat-value { font-family: monospace; font-size: 1.1em; color: #fff; }
+        
+        #debug-box { background: rgba(200, 30, 30, 0.9); color: white; padding: 15px; border-radius: 8px; font-weight: bold; border: 2px solid white; margin: 20px; text-align: center; display: none; position: absolute; top: 0; width: calc(100% - 40px); z-index: 999; }
+    </style>
+</head>
+<body>
+    <div id="debug-box"></div>
+    
+    <!-- Contêiner do Topo -->
+    <div id="hud-top" class="hud-row"></div>
+    
+    <!-- Contêiner da Base -->
+    <div id="hud-bottom" class="hud-row"></div>
+
+    <script>
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/COLE_O_ID_AQUI/export?format=csv&gid=1775980170';
+
+        async function fetchAndRender() {
+            const msgBox = document.getElementById('debug-box');
+            try {
+                const response = await fetch(csvUrl + '&t=' + new Date().getTime());
+                
+                if (!response.ok) {
+                    msgBox.innerHTML = "🔴 Erro de Conexão. Verifique se o link está 'Qualquer pessoa com o link' pode Ler.";
+                    msgBox.style.display = 'block';
+                    return;
+                }
+                
+                const data = await response.text();
+                if (!data) return;
+
+                let rows = data.split(/\r?\n/).map(row => row.split(',')); 
+                
+                const containerTop = document.getElementById('hud-top');
+                const containerBottom = document.getElementById('hud-bottom');
+                containerTop.innerHTML = '';
+                containerBottom.innerHTML = '';
+
+                // Array para armazenar apenas os jogadores que realmente existem na planilha
+                const jogadoresValidos = [];
+
+                // Lê as linhas a partir da segunda (pulando o cabeçalho)
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    if (!row || row.length < 7) continue;
+
+                    const nome = row[0]?.trim();
+                    // Ignora linhas vazias
+                    if (!nome || nome === '') continue;
+                    
+                    jogadoresValidos.push(row);
+                }
+
+                // Calcula o ponto de divisão: os primeiros vão pra baixo, os últimos vão pra cima
+                const meio = Math.ceil(jogadoresValidos.length / 2);
+
+                jogadoresValidos.forEach((row, index) => {
+                    const nome = row[0].trim();
+                    const pvAtual = parseFloat(row[1]) || 0;
+                    const pvMax = parseFloat(row[2]) || 1;
+                    const sanAtual = parseFloat(row[3]) || 0;
+                    const sanMax = parseFloat(row[4]) || 1; 
+                    const pmAtual = parseFloat(row[5]) || 0;
+                    const pmMax = parseFloat(row[6]) || 1;
+
+                    const pvPct = Math.min((pvAtual / pvMax) * 100, 100);
+                    const sanPct = Math.min((sanAtual / sanMax) * 100, 100);
+                    const pmPct = Math.min((pmAtual / pmMax) * 100, 100);
+
+                    const card = document.createElement('div');
+                    card.className = 'player-card';
+                    
+                    card.innerHTML = `
+                        <h2 class="player-name">${nome}</h2>
+                        <div class="stat-group">
+                            <div class="stat-header"><span>❤️ Vida</span><span class="stat-value">${pvAtual}/${pvMax}</span></div>
+                            <div class="bar-bg"><div class="bar-fill fill-hp" style="width: ${pvPct}%;"></div></div>
+                        </div>
+                        <div class="stat-group">
+                            <div class="stat-header"><span>🧠 Sanidade</span><span class="stat-value">${sanAtual}/${sanMax}</span></div>
+                            <div class="bar-bg"><div class="bar-fill fill-san" style="width: ${sanPct}%;"></div></div>
+                        </div>
+                        <div class="stat-group">
+                            <div class="stat-header"><span>✨ Magia</span><span class="stat-value">${pmAtual}/${pmMax}</span></div>
+                            <div class="bar-bg"><div class="bar-fill fill-mp" style="width: ${pmPct}%;"></div></div>
+                        </div>
+                    `;
+                    
+                    // Se o jogador estiver na primeira metade da planilha, vai pra base. Se estiver na segunda metade, vai pro topo.
+                    if (index < meio) {
+                        containerBottom.appendChild(card);
+                    } else {
+                        containerTop.appendChild(card);
+                    }
+                });
+                
+                msgBox.style.display = 'none';
+            } catch (error) {
+                console.error("Erro ao carregar dados do HUD:", error);
+            }
+        }
+
+        fetchAndRender();
+        // Atualiza no OBS a cada 3 segundos
+        setInterval(fetchAndRender, 3000); 
+    </script>
+</body>
+</html>
