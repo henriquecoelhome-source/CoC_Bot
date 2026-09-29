@@ -68,6 +68,8 @@ Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na t
 
 **HUD de status (novo!):**
 
+![HUD](assets/exemplo7.png)
+
 Um terceiro overlay, o `CthulhuStatus.html`, mostra um cartão por investigador com barras de **Vida, Sanidade e Magia**. As barras se atualizam sozinhas quando você muda os números na planilha, e os cartões se dividem entre o topo e a base da tela. Ele funciona à parte do bot (não precisa do `index.js` ligado) — veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
 
 ---
