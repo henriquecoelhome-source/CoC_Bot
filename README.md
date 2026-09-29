@@ -27,7 +27,7 @@ Bot de Discord que lê as fichas dos investigadores direto de uma planilha do Go
 - [Passo 5 — Preparar a planilha das fichas](#passo-5--preparar-a-planilha-das-fichas)
 - [Passo 6 — Criar o arquivo .env](#passo-6--criar-o-arquivo-env)
 - [Passo 7 — Instalar e ligar o bot](#passo-7--instalar-e-ligar-o-bot)
-- [Passo 8 — Colocar o overlay no OBS (opcional)](#passo-8--colocar-o-overlay-no-obs)
+- [Passo 8 — Colocar o overlay no OBS](#passo-8--colocar-o-overlay-no-obs)
 - [Passo 9 — HUD de Vida, Sanidade e Magia (opcional)](#passo-9--hud-de-vida-sanidade-e-magia-opcional)
 - [Como usar na mesa](#-como-usar-na-mesa)
 - [Personalizando o visual e os sons](#-personalizando-o-visual-e-os-sons)
@@ -68,7 +68,7 @@ Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na t
 
 **HUD de status (novo!):**
 
-Um terceiro overlay, o `CthulhuStatus.html`, mostra um cartão por investigador com barras de **Vida, Sanidade e Magia**(Essas das imagens acima). As barras se atualizam sozinhas quando você muda os números na planilha, e os cartões se dividem entre o topo e a base da tela. Ele funciona à parte do bot (não precisa do `index.js` ligado) — veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
+Um terceiro overlay, o `CthulhuStatus.html`, mostra um cartão por investigador com barras de **Vida, Sanidade e Magia**. As barras se atualizam sozinhas quando você muda os números na planilha, e os cartões se dividem entre o topo e a base da tela. Ele funciona à parte do bot (não precisa do `index.js` ligado) — veja o [Passo 9](#passo-9--hud-de-vida-sanidade-e-magia-opcional).
 
 ---
 ## 🔄 Como funciona
@@ -176,7 +176,7 @@ Ao final, sua pasta deve conter:
 ```
 index.js  package.json  README.md  LICENSE  .gitignore
 overlay/   (os overlays do OBS e a pasta de sons)
-ficha/     (a ficha modelo em Excel)
+ficha/     (a ficha modelo em Excel e o script do HUD)
 assets/    (imagens do README e o guia técnico)
 ```
 
@@ -438,6 +438,30 @@ O `overlay/CthulhuStatus.html` mostra na tela da live um cartão por investigado
 
 ### 9.1 Criar a aba do HUD
 
+Existem dois jeitos: o **automático** (um script que monta tudo em 2 minutos, recomendado) e o **manual**. Se a sua planilha usa a `Ficha_CoC_Modelo.xlsx` e as abas dos jogadores começam com `Ficha` (ex.: `Ficha 1 (Arthur)`), vá de automático.
+
+#### Jeito automático (recomendado)
+
+O script `ficha/HUD_criar_aba.gs` roda **dentro do próprio Google Sheets** (Google Apps Script): não precisa instalar nada, nem o Node, nem colocar o ID em lugar nenhum.
+
+1. Abra o arquivo `ficha/HUD_criar_aba.gs` do projeto num editor de texto, selecione tudo (`Ctrl + A`) e copie (`Ctrl + C`).
+2. Abra a **sua planilha** no Google Sheets e clique em **Extensões → Apps Script**. Abre uma aba nova do navegador com um editor.
+3. Apague o código de exemplo que já vem lá (`function myFunction() {...}`), cole o script e salve com `Ctrl + S`. O nome do projeto pode ser qualquer um.
+4. Volte na aba da planilha e **recarregue a página** (`F5`). Depois de alguns segundos aparece um menu novo, **🎲 HUD**, ao lado de "Ajuda".
+5. Clique em **🎲 HUD → Criar / atualizar aba do HUD**.
+6. Na **primeira vez**, o Google pede autorização (*Autorização necessária → Revisar permissões*, escolha sua conta). Vai aparecer o aviso *"O Google não verificou este app"*: é normal, o script é seu e roda só dentro da sua planilha. Clique em **Avançado → Acessar (nome do projeto)** e depois em **Permitir**. Depois clique de novo no item do menu.
+7. Pronto: o script cria a aba `OBS_Export (NAO MEXER)` com uma linha por ficha, já com as fórmulas, e abre uma janelinha com a linha **`const csvUrl = '...'` pronta**. Clique em **Copiar** e siga pro [Passo 9.3](#93-colocar-o-link-no-arquivo).
+
+O que o script faz por baixo: procura todas as abas que **começam com `Ficha`** (ignorando as que tiverem "modelo" no nome) e, pra cada uma, puxa o nome e os números de Vida, Sanidade e Magia **por fórmula**. Por isso o HUD acompanha as fichas sozinho depois. Ele não altera nenhuma ficha.
+
+- **Entrou um jogador novo (ou uma ficha foi renomeada)?** Rode o item do menu de novo e confirme que quer refazer a aba.
+- **Perdeu o link?** Use **🎲 HUD → Mostrar link do HUD**.
+- **Sua ficha não é a modelo, ou as abas têm outro nome?** Nas primeiras linhas do script existem as configurações `PREFIXO_FICHAS` (com o que o nome da aba começa) e `CELULAS` (em qual célula de cada ficha ficam o nome e os valores). Troque lá e rode de novo.
+
+> Se preferir não usar script, o jeito manual está logo abaixo. O resultado é o mesmo.
+
+#### Jeito manual
+
 Na mesma planilha das fichas, crie uma **aba nova** (botão **+** no canto inferior esquerdo) e dê um nome, por exemplo `HUD`. Monte assim, com uma linha por jogador e **as colunas exatamente nesta ordem**:
 
 | | A | B | C | D | E | F | G |
@@ -458,9 +482,11 @@ Regras que o HUD segue:
 
 **Quem aparece onde:** os cartões se dividem entre a base e o topo da tela. A **primeira metade** da lista (de cima pra baixo na planilha) vai pra **base**, a segunda metade vai pro **topo**. Com um número ímpar de jogadores, a base fica com um a mais (ex.: 5 jogadores = 3 embaixo e 2 em cima).
 
-> 💡 **Dica: use fórmulas em vez de digitar.** Cada célula do HUD pode puxar o valor direto da ficha do jogador, assim o HUD acompanha a ficha sozinho quando o jogador atualiza a vida. Exemplo: `='Ficha 1 (Arthur)'!C10` — troque pelo nome da aba e pela célula onde aquele valor está na sua ficha.
+> 💡 **Dica: use fórmulas em vez de digitar.** Cada célula do HUD pode puxar o valor direto da ficha do jogador, assim o HUD acompanha a ficha sozinho quando o jogador atualiza a vida. Exemplo: `='Ficha 1 (Arthur)'!M4`. Na `Ficha_CoC_Modelo.xlsx` as células são: nome `D3`, PV atual `M4`, PV máx `I4`, SAN atual `M8`, SAN máx `K8`, PM atual `M6` e PM máx `I6` (são as que o script automático usa). Se a sua ficha for diferente, troque pelo nome da aba e pelas células dela.
 
 ### 9.2 Pegar o link da aba (CSV)
+
+> ✅ **Usou o script do 9.1?** Ele já te mostrou o link pronto (e dá pra rever em **🎲 HUD → Mostrar link do HUD**). Pode pular pro [Passo 9.3](#93-colocar-o-link-no-arquivo). Só continue lendo aqui se fez o jeito manual ou quer entender como o link é montado.
 
 O HUD lê a aba pelo link de exportação em CSV, que tem este formato:
 
@@ -484,7 +510,7 @@ Você precisa de dois valores:
 const csvUrl = 'https://docs.google.com/spreadsheets/d/COLE_O_ID_AQUI/export?format=csv&gid=SEU_GID_AQUI';
 ```
 
-3. Troque `COLE_O_ID_AQUI` pelo ID da sua planilha e `SEU_GID_AQUI` pelo `gid` da sua aba. Mantenha as aspas e o resto do link exatamente como está.
+3. **Se usou o script do 9.1:** apague essa linha inteira e cole no lugar a linha que o script te deu. **Se fez o jeito manual:** troque `COLE_O_ID_AQUI` pelo ID da sua planilha e `SEU_GID_AQUI` pelo `gid` da sua aba, mantendo as aspas e o resto do link exatamente como está.
 4. Salve o arquivo (`Ctrl + S`).
 
 > ⚠️ **Cuidado ao subir pro GitHub:** como o compartilhamento da planilha é por link, quem souber o ID dela consegue abri-la. No repositório público, mantenha o `COLE_O_ID_AQUI` no lugar e só coloque o ID real na cópia que você usa no seu computador.
@@ -872,6 +898,9 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 | HUD: jogador não aparece | Ele está na linha 1 (que é ignorada), está com o nome vazio ou com menos de 7 colunas preenchidas | Confira o [Passo 9.1](#91-criar-a-aba-do-hud): o primeiro jogador fica na linha 2, com as colunas A a G. |
 | HUD: números `0/1` ou barra vazia | Célula com texto, `%` ou vírgula decimal, ou colunas fora de ordem | Use só números inteiros e a ordem Nome, PV atual, PV máx, SAN atual, SAN máx, PM atual, PM máx. |
 | HUD: mudei a planilha e não atualizou | O Google leva alguns segundos pra refletir a edição, ou o OBS prendeu a versão antiga do arquivo | Espere uns segundos. Se persistir, botão direito na fonte → **Propriedades** → **Atualizar cache da página atual**. |
+| HUD (script): o menu 🎲 HUD não aparece | O script foi colado mas a planilha não foi recarregada, ou o `onOpen` ainda não rodou | Salve o script, recarregue a planilha (`F5`) e espere alguns segundos. Se persistir, no editor do Apps Script escolha a função `onOpen` e clique em **Executar** uma vez. |
+| HUD (script): "Nenhuma ficha encontrada" | As abas dos jogadores não começam com `Ficha` | Renomeie as abas (ex.: `Ficha 1 (Arthur)`) ou mude o `PREFIXO_FICHAS` no topo do script. |
+| HUD (script): aparece `#REF!` ou `#ERROR!` numa linha | A aba da ficha foi renomeada/apagada depois de criar o HUD, ou a ficha não segue o layout esperado | Rode **🎲 HUD → Criar / atualizar aba do HUD** de novo. Se a sua ficha não for a modelo, ajuste `CELULAS` no script. |
 
 **Ver o erro do overlay:** botão direito na fonte de navegador → **Interagir** → tecla `F12` abre o console com as mensagens de erro.
 
@@ -898,7 +927,8 @@ Para contornar essa hibernação e garantir que o seu overlay responda instantan
 │       └── diceroll1-3.mp3   # sons de rolagem (sorteados a cada jogada)
 │
 ├── ficha/
-│   └── Ficha_CoC_Modelo.xlsx # ficha modelo automática (criada por Alan): Vida, Sanidade e perícias se calculam sozinhas
+│   ├── Ficha_CoC_Modelo.xlsx # ficha modelo automática (criada por Alan): Vida, Sanidade e perícias se calculam sozinhas
+│   └── HUD_criar_aba.gs      # script (Google Apps Script) que cria sozinho a aba do HUD a partir das fichas
 │
 └── assets/
     ├── README-tecnico.md     # versão técnica deste guia
