@@ -57,9 +57,10 @@ Se a sua mesa utiliza o bot Rollem para rolagens de dano ou dados genéricos (co
 
 ![Exemplo em um layout completo](assets/exemplo3.png)
 
-<video src="assets/exemplo6.mp4" width="600" autoplay loop muted playsinline></video>
-
 **Dados 3D (novo!):**
+
+
+
 Além dos cartões, existe um segundo overlay que joga dois dados D10 em 3D na tela (um de dezena e um de unidade, igual a um d100 de mesa). Eles são arremessados, quicam nas bordas, batem um no outro e param no número que o bot sorteou. Em vantagem/desvantagem, os dados extras aparecem e somem devagar. Dá pra usar sozinho ou junto com os cartões — veja o [Passo 8](#passo-8--colocar-o-overlay-no-obs).
 
 ---
